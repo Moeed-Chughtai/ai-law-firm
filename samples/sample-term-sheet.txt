@@ -1,0 +1,54 @@
+TERM SHEET
+Series A Preferred Stock Financing
+
+TechCo Inc. (the "Company")
+January 15, 2024
+
+INVESTMENT TERMS
+
+1. Offering Terms
+
+The Company will sell Series A Preferred Stock in a financing round of $5,000,000 at a pre-money valuation of $20,000,000. The price per share shall be determined based on the pre-money valuation divided by the fully-diluted capitalization.
+
+2. Liquidation Preference
+
+The Series A Preferred Stock shall have a liquidation preference of 1x participating preferred. In the event of any liquidation, dissolution, or winding up of the Company, holders of Series A Preferred Stock shall receive:
+(a) First, an amount equal to the Original Purchase Price plus any declared but unpaid dividends; and
+(b) Second, their pro-rata share of the remaining assets on an as-converted basis.
+
+3. Board Composition
+
+The Board of Directors shall consist of five (5) members:
+- Two (2) members designated by the holders of Series A Preferred Stock
+- Two (2) members designated by the holders of Common Stock
+- One (1) independent member, who must be approved by the holders of Series A Preferred Stock
+
+4. Protective Provisions
+
+The consent of holders of a majority of the outstanding Series A Preferred Stock shall be required for:
+(a) Any sale, lease, or transfer of all or substantially all of the Company's assets;
+(b) Any merger, consolidation, or reorganization;
+(c) Any amendment to the Company's Certificate of Incorporation or Bylaws;
+(d) Any issuance of new securities (except for employee stock options);
+(e) Approval of key personnel hiring decisions, including C-level executives;
+(f) Entry into contracts or commitments exceeding $50,000 in value;
+(g) Any declaration or payment of dividends.
+
+5. Anti-Dilution Protection
+
+The Series A Preferred Stock shall have full ratchet anti-dilution protection. If the Company issues additional shares of Common Stock or securities convertible into Common Stock at a price per share less than the Conversion Price, the Conversion Price shall be adjusted downward to such lower price.
+
+6. Drag-Along Rights
+
+If holders of more than 50% of the outstanding shares (voting on an as-converted basis) approve a sale of the Company, all other shareholders shall be required to participate in such sale on the same terms and conditions.
+
+7. Information Rights
+
+Investors holding at least 100,000 shares of Series A Preferred Stock shall be entitled to:
+(a) Annual audited financial statements;
+(b) Quarterly unaudited financial statements;
+(c) Annual budget and business plan.
+
+8. General Provisions
+
+This term sheet is non-binding except for the provisions regarding confidentiality, exclusivity, and expenses. The parties agree to negotiate in good faith to execute definitive documents within 30 days.

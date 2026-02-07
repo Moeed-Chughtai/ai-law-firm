@@ -2,7 +2,7 @@ import { Matter, Issue, Severity } from '../../types';
 import { generateId } from '../../utils';
 import { getMatter, setMatter } from '../../store';
 import { callLLMJSON } from '../../ai/openai';
-import { retrieveIssueContext, formatChunksForPrompt } from '../../rag/retrieval';
+import { retrieveGeneralIssueContext, formatChunksForPrompt } from '../../rag/retrieval';
 
 interface IssueAnalysisResult {
   issues: Array<{
@@ -16,15 +16,17 @@ interface IssueAnalysisResult {
 export async function runIssueAnalysis(matter: Matter): Promise<Partial<Matter>> {
   const systemPrompt = `You are a senior startup lawyer specializing in ${matter.docType === 'safe' ? 'SAFE agreements' : 'venture capital term sheets'}. Analyze the document for legal issues, market deviations, and potential risks. Use the provided legal references to ensure accuracy. Be thorough but focused on material issues.`;
 
-  // Retrieve relevant legal context
-  const legalContext = await retrieveIssueContext(
-    'legal issues market standards',
-    'general',
-    matter
-  );
-  const contextText = legalContext.length > 0
-    ? `\n\nReference Legal Documents:\n${formatChunksForPrompt(legalContext)}`
-    : '';
+  // Retrieve relevant legal context (optional - gracefully handle failures)
+  let contextText = '';
+  try {
+    const legalContext = await retrieveGeneralIssueContext(matter);
+    if (legalContext.length > 0) {
+      contextText = `\n\nReference Legal Documents:\n${formatChunksForPrompt(legalContext)}`;
+    }
+  } catch (error) {
+    console.warn('RAG retrieval failed, continuing without context:', error);
+    // Continue without RAG context - LLM still has training data
+  }
 
   const userPrompt = `Analyze this ${matter.docType === 'safe' ? 'SAFE' : 'Term Sheet'} document for legal issues:
 
@@ -54,11 +56,18 @@ Focus on:
 - Governance and control
 - Market standard deviations`;
 
-  const result = await callLLMJSON<IssueAnalysisResult>(
-    systemPrompt,
-    userPrompt,
-    { temperature: 0.3, maxTokens: 3000 }
-  );
+  let result: IssueAnalysisResult;
+  try {
+    result = await callLLMJSON<IssueAnalysisResult>(
+      systemPrompt,
+      userPrompt,
+      { temperature: 0.3, maxTokens: 3000 }
+    );
+  } catch (error) {
+    console.error('Issue analysis failed:', error);
+    // Return empty issues on error rather than crashing
+    return { issues: [] };
+  }
 
   const issues: Issue[] = result.issues.map((issue) => ({
     ...issue,
@@ -74,7 +83,7 @@ Focus on:
         s.id === 'issue_analysis'
           ? { ...s, data: { issuesFound: i + 1, issues: current.issues } }
           : s
-      ));
+      );
       await setMatter(current);
     }
     // Small delay to show incremental updates

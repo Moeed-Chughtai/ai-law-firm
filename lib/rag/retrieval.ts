@@ -60,7 +60,24 @@ export async function retrieveLegalContext(
 }
 
 /**
- * Retrieve context for issue analysis
+ * Retrieve general context for initial issue analysis
+ */
+export async function retrieveGeneralIssueContext(
+  matter: Matter
+): Promise<RetrievedChunk[]> {
+  const query = `${matter.docType === 'safe' ? 'SAFE' : 'term sheet'} legal issues market standards best practices`;
+  
+  return retrieveLegalContext(query, matter, {
+    useMultiQuery: false, // Simpler for initial analysis
+    useCompression: false,
+    topK: 5,
+    docType: matter.docType === 'safe' ? 'safe_template' : 'term_sheet',
+    minRelevance: 0.6, // Lower threshold for general context
+  });
+}
+
+/**
+ * Retrieve context for specific issue analysis
  */
 export async function retrieveIssueContext(
   issueTitle: string,

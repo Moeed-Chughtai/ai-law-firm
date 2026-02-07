@@ -1,0 +1,41 @@
+SAFE (Simple Agreement for Future Equity)
+
+This SAFE is entered into as of January 15, 2024 by and between TechCo Inc., a Delaware corporation (the "Company"), and Angel Investor LLC (the "Investor").
+
+1. Investment Amount
+
+The Investor hereby invests Five Hundred Thousand Dollars ($500,000) in the Company.
+
+2. Valuation Cap
+
+The Valuation Cap for this SAFE shall be Eight Million Dollars ($8,000,000). This means that upon conversion, the Investor's shares will be priced based on the lower of the Valuation Cap price or the price per share in the Equity Financing.
+
+3. Discount Rate
+
+The Discount Rate shall be twenty-five percent (25%). Upon conversion, the Investor shall receive shares at a price equal to the lesser of the Valuation Cap price or the Discount Price (which is the price per share in the Equity Financing multiplied by 0.75).
+
+4. Conversion Events
+
+This SAFE will convert into shares of Safe Preferred Stock upon the occurrence of:
+(a) An Equity Financing in which the Company issues and sells Preferred Stock at an aggregate purchase price of not less than $500,000;
+(b) A Liquidity Event; or
+(c) A Dissolution Event.
+
+5. Pro-Rata Rights
+
+The Investor shall have the right, but not the obligation, to participate in subsequent financing rounds on a pro-rata basis. This right shall be available to all Investors regardless of investment amount.
+
+6. Most Favored Nation
+
+[This section is intentionally left blank - to be defined in future agreements]
+
+7. Representations and Warranties
+
+The Company represents and warrants that:
+(a) It is duly organized and validly existing under the laws of the State of Delaware;
+(b) It has full power and authority to execute this SAFE;
+(c) The execution of this SAFE does not violate any existing agreements.
+
+8. Governing Law
+
+This SAFE shall be governed by the laws of the State of Delaware. Any disputes arising under this agreement shall be resolved through binding arbitration in San Francisco, California.
