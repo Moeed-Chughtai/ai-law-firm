@@ -8,6 +8,10 @@ import {
   XCircle,
   Shield,
   Eye,
+  ArrowRight,
+  Gauge,
+  Scale,
+  BookOpen,
 } from 'lucide-react';
 
 interface Props {
@@ -22,165 +26,179 @@ export default function GuardrailsStage({ matter, stage }: Props) {
 
   const checks = [
     {
-      label: 'Jurisdiction Check',
-      description: 'Verified Delaware corporate law compliance',
+      label: 'Jurisdiction Compliance',
+      description: 'Verified all recommendations comply with the governing jurisdiction\'s corporate law and regulatory framework.',
       status: guardrails.jurisdictionCheck,
-      icon: Shield,
+      icon: Scale,
+      passDetail: 'All provisions validated against Delaware General Corporation Law (DGCL)',
+      failDetail: 'Some recommendations may conflict with jurisdictional requirements',
     },
     {
       label: 'Citation Completeness',
-      description: 'All recommendations backed by legal sources',
+      description: 'Confirmed every recommendation is backed by identifiable legal authority, market precedent, or statutory reference.',
       status: guardrails.citationCompleteness,
-      icon: CheckCircle2,
+      icon: BookOpen,
+      passDetail: 'All recommendations have supporting legal or market authority',
+      failDetail: 'Some recommendations lack sufficient supporting authority',
     },
     {
       label: 'Confidence Threshold',
-      description: `Score: ${Math.round(guardrails.confidenceThreshold.score * 100)}% / Required: ${Math.round(guardrails.confidenceThreshold.required * 100)}%`,
+      description: `Aggregate analysis confidence of ${Math.round(guardrails.confidenceThreshold.score * 100)}% vs. the ${Math.round(guardrails.confidenceThreshold.required * 100)}% minimum required for automated output.`,
       status: guardrails.confidenceThreshold.pass ? 'pass' : 'fail',
-      icon: Lock,
+      icon: Gauge,
+      passDetail: 'Confidence exceeds minimum threshold for automated delivery',
+      failDetail: 'Confidence below threshold — human review recommended',
     },
   ];
 
+  const passedCount = checks.filter(c => c.status === 'pass').length;
+
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-8 animate-slide-up">
       {/* Decision Card */}
       <div
-        className={`glass-card-strong p-6 border-2 ${
+        className={`p-6 rounded-xl border-2 ${
           guardrails.escalationRequired
-            ? 'border-amber-200 bg-amber-50/30'
-            : 'border-emerald-200 bg-emerald-50/30'
+            ? 'border-amber-300 bg-amber-50'
+            : 'border-emerald-300 bg-emerald-50'
         }`}
       >
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-start gap-4">
           <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              guardrails.escalationRequired ? 'bg-amber-100' : 'bg-emerald-100'
+            className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${
+              guardrails.escalationRequired ? 'bg-amber-500' : 'bg-emerald-500'
             }`}
           >
             {guardrails.escalationRequired ? (
-              <Eye className="w-6 h-6 text-amber-600" />
+              <Eye className="w-7 h-7 text-white" />
             ) : (
-              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+              <CheckCircle2 className="w-7 h-7 text-white" />
             )}
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-serif font-semibold text-slate-900">
               {guardrails.escalationRequired
                 ? 'Human Review Recommended'
-                : 'All Guardrails Passed'}
+                : 'All Quality Guardrails Passed'}
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-slate-600 mt-1 leading-relaxed">
               {guardrails.escalationRequired
-                ? 'This matter requires additional human oversight'
-                : 'This matter has passed all automated quality checks'}
+                ? 'One or more automated quality checks flagged this matter for additional human oversight before action is taken on the deliverables.'
+                : `This matter passed all ${checks.length} automated quality checks. The analysis meets the confidence and compliance thresholds for automated delivery.`}
             </p>
+            <div className="flex items-center gap-2 mt-3">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${guardrails.escalationRequired ? 'bg-amber-200 text-amber-800' : 'bg-emerald-200 text-emerald-800'}`}>
+                {passedCount}/{checks.length} checks passed
+              </span>
+            </div>
           </div>
         </div>
 
         {guardrails.escalationRequired && guardrails.escalationReason && (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="mt-4 p-4 rounded-xl bg-amber-100 border border-amber-200">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-amber-800">{guardrails.escalationReason}</p>
+              <AlertTriangle className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+              <p className="text-sm text-amber-800 leading-relaxed">{guardrails.escalationReason}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Individual checks */}
-      <div className="space-y-3">
-        {checks.map((check, i) => {
-          const Icon = check.icon;
-          const statusIcon =
-            check.status === 'pass' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-            ) : check.status === 'warning' ? (
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
-            ) : (
-              <XCircle className="w-5 h-5 text-red-500" />
-            );
+      {/* Individual Checks */}
+      <div>
+        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Quality Checks</h4>
+        <div className="space-y-3">
+          {checks.map((check, i) => {
+            const Icon = check.icon;
+            const isPassing = check.status === 'pass';
+            const isWarning = check.status === 'warning';
 
-          return (
-            <div
-              key={i}
-              className="glass-card-strong p-5 flex items-center gap-4"
-            >
+            return (
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  check.status === 'pass'
-                    ? 'bg-emerald-50'
-                    : check.status === 'warning'
-                      ? 'bg-amber-50'
-                      : 'bg-red-50'
-                }`}
+                key={i}
+                className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm"
               >
-                {statusIcon}
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      isPassing ? 'bg-emerald-100' : isWarning ? 'bg-amber-100' : 'bg-red-100'
+                    }`}
+                  >
+                    {isPassing ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    ) : isWarning ? (
+                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-slate-900">{check.label}</h4>
+                      <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          isPassing ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : isWarning ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}
+                      >
+                        {isPassing ? '✓ Pass' : isWarning ? '⚠ Warning' : '✗ Fail'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{check.description}</p>
+                    <p className={`text-[11px] mt-2 font-medium ${isPassing ? 'text-emerald-600' : isWarning ? 'text-amber-600' : 'text-red-600'}`}>
+                      {isPassing ? check.passDetail : check.failDetail}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  {check.label}
-                </h4>
-                <p className="text-xs text-gray-500">{check.description}</p>
-              </div>
-              <span
-                className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                  check.status === 'pass'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : check.status === 'warning'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-red-50 text-red-700'
-                }`}
-              >
-                {check.status === 'pass'
-                  ? 'Pass'
-                  : check.status === 'warning'
-                    ? 'Warning'
-                    : 'Fail'}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Confidence vs Threshold visualization */}
-      <div className="glass-card-strong p-6">
-        <h4 className="text-sm font-semibold text-gray-900 mb-4">
-          Confidence vs Threshold
-        </h4>
-        <div className="relative h-8 bg-surface-100 rounded-full overflow-hidden">
-          <div
-            className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ${
-              guardrails.confidenceThreshold.pass
-                ? 'bg-emerald-400'
-                : 'bg-red-400'
-            }`}
-            style={{
-              width: `${guardrails.confidenceThreshold.score * 100}%`,
-            }}
-          />
-          {/* Threshold line */}
-          <div
-            className="absolute top-0 h-full w-0.5 bg-gray-800"
-            style={{
-              left: `${guardrails.confidenceThreshold.required * 100}%`,
-            }}
-          />
-          <div
-            className="absolute -top-6 text-[10px] font-mono text-gray-500 transform -translate-x-1/2"
-            style={{
-              left: `${guardrails.confidenceThreshold.required * 100}%`,
-            }}
-          >
-            Required: {Math.round(guardrails.confidenceThreshold.required * 100)}%
+      {/* Confidence Visualization */}
+      <div>
+        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Confidence Score</h4>
+        <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-slate-700">Analysis Confidence</span>
+            <span className={`text-sm font-bold ${guardrails.confidenceThreshold.pass ? 'text-emerald-600' : 'text-red-600'}`}>
+              {Math.round(guardrails.confidenceThreshold.score * 100)}%
+            </span>
+          </div>
+          <div className="relative h-8 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ${
+                guardrails.confidenceThreshold.pass ? 'bg-emerald-400' : 'bg-red-400'
+              }`}
+              style={{ width: `${guardrails.confidenceThreshold.score * 100}%` }}
+            />
+            {/* Threshold marker */}
+            <div
+              className="absolute top-0 h-full w-0.5 bg-slate-800 z-10"
+              style={{ left: `${guardrails.confidenceThreshold.required * 100}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[10px] text-slate-400">0%</span>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-0.5 bg-slate-800 rounded" />
+              <span className="text-[10px] text-slate-500 font-medium">
+                Required: {Math.round(guardrails.confidenceThreshold.required * 100)}%
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">100%</span>
           </div>
         </div>
-        <div className="flex justify-between mt-2 text-xs text-gray-400">
-          <span>0%</span>
-          <span className="font-semibold text-gray-700">
-            Score: {Math.round(guardrails.confidenceThreshold.score * 100)}%
-          </span>
-          <span>100%</span>
-        </div>
+      </div>
+
+      {/* What happens next */}
+      <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <ArrowRight className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+        <p className="text-xs text-slate-500 leading-relaxed">
+          <span className="font-semibold text-slate-700">Next: Deliverables</span> — Your final legal work product will be packaged into downloadable documents: a comprehensive memo, redline markup, and structured JSON data.
+        </p>
       </div>
     </div>
   );
