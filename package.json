@@ -1,0 +1,36 @@
+{
+  "name": "lexforge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:init": "tsx scripts/init-db.ts",
+    "db:seed": "tsx scripts/seed-legal-docs.ts"
+  },
+  "dependencies": {
+    "@types/pg": "^8.16.0",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.400.0",
+    "next": "^14.2.0",
+    "openai": "^6.18.0",
+    "pg": "^8.18.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^9.0.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0"
+  }
+}
