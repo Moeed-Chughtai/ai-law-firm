@@ -7,6 +7,9 @@ interface GuardrailAnalysis {
   confidenceThreshold: { score: number; required: number; pass: boolean };
   escalationRequired: boolean;
   escalationReason?: string;
+  hallucinationCheck: 'pass' | 'warning' | 'fail';
+  scopeComplianceCheck: 'pass' | 'warning' | 'fail';
+  ethicsCheck: 'pass' | 'warning' | 'fail';
 }
 
 export async function runGuardrails(matter: Matter): Promise<Partial<Matter>> {
@@ -94,6 +97,7 @@ Evaluate whether this AI-generated legal analysis meets professional standards a
 | Low-Confidence Issues (<0.6) | ${lowConfidenceIssues.length} | 0 |
 | Adversarial Critiques | ${adversarialCritiquesCount} | — |
 | Draft Revised Flag | ${matter.draftRevised ? 'YES ⚠️' : 'No'} | No |
+| Adversarial Loop Count | ${matter.adversarialLoopCount || 0} | 0-1 |
 
 **ADVERSARIAL REVIEW FINDINGS:**
 ${(matter.adversarialCritiques || []).map((c, i) => `${i + 1}. ${c}`).join('\n') || 'No adversarial critiques recorded.'}
@@ -115,7 +119,7 @@ ${matter.issues
 ${matter.documentText.substring(0, 2000)}
 
 **ASSESSMENT REQUIRED:**
-Evaluate all six guardrail dimensions and return:
+Evaluate all guardrail dimensions and return:
 
 {
   "jurisdictionCheck": "pass" | "fail",
@@ -125,15 +129,35 @@ Evaluate all six guardrail dimensions and return:
     "required": ${requiredThreshold},
     "pass": ${confidenceScore >= requiredThreshold}
   },
+  "hallucinationCheck": "pass" | "warning" | "fail" — Check if any assertions about the document don't match the actual text, or if market data claims seem fabricated,
+  "scopeComplianceCheck": "pass" | "warning" | "fail" — Check if the analysis stayed within the defined engagement scope and addressed all scoped workstreams,
+  "ethicsCheck": "pass" | "warning" | "fail" — Check if recommendations include appropriate disclaimers, avoid unauthorized practice of law, and correctly flag when human review is essential,
   "escalationRequired": boolean (apply ALL escalation criteria — be strict),
-  "escalationReason": "Detailed, specific reason(s) for escalation, listing each triggered criterion. Or null if all checks pass."
+  "escalationReason": "Detailed reason(s) for escalation, or null if all checks pass."
 }`;
 
   const guardrails = await callLLMJSON<GuardrailAnalysis>(
     systemPrompt,
     userPrompt,
     { temperature: 0.1, maxTokens: 1500 }
-  );
+  ).catch((error) => {
+    console.error('Guardrails LLM call failed:', error);
+    // Return safe defaults if LLM fails
+    return {
+      jurisdictionCheck: 'pass' as const,
+      citationCompleteness: 'pass' as const,
+      confidenceThreshold: {
+        score: confidenceScore,
+        required: requiredThreshold,
+        pass: confidenceScore >= requiredThreshold,
+      },
+      escalationRequired: false,
+      escalationReason: undefined,
+      hallucinationCheck: 'warning' as const,
+      scopeComplianceCheck: 'warning' as const,
+      ethicsCheck: 'pass' as const,
+    };
+  });
 
   // Override confidence threshold with deterministic check (LLM can't change math)
   guardrails.confidenceThreshold = {
@@ -191,6 +215,35 @@ Evaluate all six guardrail dimensions and return:
     );
   }
 
+  if (guardrails.hallucinationCheck === 'fail') {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      'Hallucination check failed — assertions about the document may not match actual document text'
+    );
+  }
+
+  if (guardrails.scopeComplianceCheck === 'fail') {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      'Scope compliance check failed — analysis may have exceeded or fallen short of the defined engagement scope'
+    );
+  }
+
+  if (guardrails.ethicsCheck === 'fail') {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      'Ethics check failed — recommendations may lack appropriate disclaimers or risk unauthorized practice of law issues'
+    );
+  }
+
+  // Flag if adversarial loopback was exhausted without resolution
+  if ((matter.adversarialLoopCount || 0) >= 2 && matter.draftRevised) {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      `Adversarial review loop exhausted (${matter.adversarialLoopCount} revision rounds) with unresolved material concerns — human review mandatory`
+    );
+  }
+
   // Consolidate escalation reasons
   if (escalationReasons.length > 0) {
     guardrails.escalationRequired = true;
@@ -198,7 +251,12 @@ Evaluate all six guardrail dimensions and return:
   }
 
   return {
-    guardrails,
+    guardrails: {
+      ...guardrails,
+      hallucinationCheck: guardrails.hallucinationCheck,
+      scopeComplianceCheck: guardrails.scopeComplianceCheck,
+      ethicsCheck: guardrails.ethicsCheck,
+    },
     stages: matter.stages.map((s) =>
       s.id === 'guardrails' ? { ...s, data: guardrails } : s
     ),

@@ -10,6 +10,9 @@ import {
   Gauge,
   Scale,
   BookOpen,
+  Brain,
+  Target,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface Props {
@@ -24,6 +27,7 @@ export default function GuardrailsStage({ matter, stage }: Props) {
 
   const checks = [
     {
+      icon: Scale,
       label: 'Jurisdiction Compliance',
       description: 'Verified all recommendations comply with the governing jurisdiction\'s corporate law and regulatory framework.',
       status: guardrails.jurisdictionCheck,
@@ -31,6 +35,7 @@ export default function GuardrailsStage({ matter, stage }: Props) {
       failDetail: 'Some recommendations may conflict with jurisdictional requirements',
     },
     {
+      icon: BookOpen,
       label: 'Citation Completeness',
       description: 'Confirmed every recommendation is backed by identifiable legal authority, market precedent, or statutory reference.',
       status: guardrails.citationCompleteness,
@@ -38,6 +43,31 @@ export default function GuardrailsStage({ matter, stage }: Props) {
       failDetail: 'Some recommendations lack sufficient supporting authority',
     },
     {
+      icon: Brain,
+      label: 'Hallucination Check',
+      description: 'Verified that no fabricated citations, invented statutes, or non-existent case law are referenced.',
+      status: guardrails.hallucinationCheck || 'pass',
+      passDetail: 'No hallucinated references or fabricated authorities detected',
+      failDetail: 'Potential hallucinated citations detected — human verification required',
+    },
+    {
+      icon: Target,
+      label: 'Scope Compliance',
+      description: 'Confirmed analysis stays within the defined engagement scope and does not exceed the scope of work.',
+      status: guardrails.scopeComplianceCheck || 'pass',
+      passDetail: 'All analysis within defined engagement scope boundaries',
+      failDetail: 'Some analysis may exceed the defined engagement scope',
+    },
+    {
+      icon: ShieldCheck,
+      label: 'Ethics Check',
+      description: 'Verified no unauthorized practice of law, no conflicts of interest in advice, and appropriate disclaimers present.',
+      status: guardrails.ethicsCheck || 'pass',
+      passDetail: 'Ethics and professional responsibility standards met',
+      failDetail: 'Potential ethics concern flagged — review required',
+    },
+    {
+      icon: Gauge,
       label: 'Confidence Threshold',
       description: `Aggregate confidence of ${Math.round(guardrails.confidenceThreshold.score * 100)}% vs. ${Math.round(guardrails.confidenceThreshold.required * 100)}% minimum required.`,
       status: guardrails.confidenceThreshold.pass ? 'pass' : 'fail',
@@ -73,7 +103,7 @@ export default function GuardrailsStage({ matter, stage }: Props) {
             <p className="text-xs text-gray-600 mt-1 leading-relaxed">
               {guardrails.escalationRequired
                 ? 'One or more quality checks flagged this matter for human oversight before action is taken.'
-                : `Passed all ${checks.length} automated quality checks. The analysis meets confidence and compliance thresholds.`}
+                : `Passed all ${checks.length} automated quality checks. The analysis meets confidence, compliance, and ethics thresholds.`}
             </p>
             <span
               className={`inline-block mt-2 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
@@ -104,6 +134,7 @@ export default function GuardrailsStage({ matter, stage }: Props) {
           {checks.map((check, i) => {
             const isPassing = check.status === 'pass';
             const isWarning = check.status === 'warning';
+            const CheckIcon = check.icon;
 
             return (
               <div key={i} className="card p-4">
@@ -119,7 +150,10 @@ export default function GuardrailsStage({ matter, stage }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-sm font-medium text-gray-900">{check.label}</h4>
+                      <div className="flex items-center gap-2">
+                        <CheckIcon className="w-3.5 h-3.5 text-gray-400" />
+                        <h4 className="text-sm font-medium text-gray-900">{check.label}</h4>
+                      </div>
                       <span
                         className={`severity-badge shrink-0 ${
                           isPassing
@@ -191,7 +225,7 @@ export default function GuardrailsStage({ matter, stage }: Props) {
       <div className="flex items-start gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100">
         <ArrowRight className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
         <p className="text-xs text-gray-500 leading-relaxed">
-          <span className="font-semibold text-gray-700">Next: Deliverables</span> — Final legal work product packaged into downloadable documents: comprehensive memo, redline markup, and structured JSON data.
+          <span className="font-semibold text-gray-700">Next: Deliverables</span> — Final legal work product packaged: engagement letter, comprehensive memo, annotated redline, risk summary, and audit log.
         </p>
       </div>
     </div>

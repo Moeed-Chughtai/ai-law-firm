@@ -103,6 +103,19 @@ async function _doInitialize(): Promise<void> {
     } catch {
       // Column is already JSONB or table was just created — ignore
     }
+
+    // Add new columns if they don't exist yet (idempotent migrations)
+    const migrations = [
+      `ALTER TABLE matters ADD COLUMN IF NOT EXISTS adversarial_loop_count INTEGER DEFAULT 0`,
+      `ALTER TABLE matters ADD COLUMN IF NOT EXISTS conflict_check JSONB`,
+      `ALTER TABLE matters ADD COLUMN IF NOT EXISTS engagement_scope JSONB`,
+      `ALTER TABLE matters ADD COLUMN IF NOT EXISTS defined_terms JSONB DEFAULT '[]'`,
+      `ALTER TABLE matters ADD COLUMN IF NOT EXISTS missing_provisions JSONB DEFAULT '[]'`,
+    ];
+    for (const sql of migrations) {
+      try { await client.query(sql); } catch { /* column already exists */ }
+    }
+
     await client.query('BEGIN');
 
     // Legal documents table

@@ -53,7 +53,12 @@ CREATE TABLE IF NOT EXISTS matters (
   deliverables JSONB DEFAULT '[]',
   audit_log JSONB DEFAULT '[]',
   adversarial_critiques TEXT[] DEFAULT '{}',
-  draft_revised BOOLEAN DEFAULT FALSE
+  draft_revised BOOLEAN DEFAULT FALSE,
+  adversarial_loop_count INTEGER DEFAULT 0,
+  conflict_check JSONB,
+  engagement_scope JSONB,
+  defined_terms JSONB DEFAULT '[]',
+  missing_provisions JSONB DEFAULT '[]'
 );
 
 -- Issue citations (track which legal docs were used)

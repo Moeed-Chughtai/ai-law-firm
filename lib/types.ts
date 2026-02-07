@@ -34,23 +34,84 @@ export interface Issue {
   explanation: string;
   recommendation?: string;
   confidence?: number;
+  category?: IssueCategory;
+  interactionEffects?: string[];
+  statutoryBasis?: string;
+  standardFormDeviation?: string;
   research?: {
     marketNorms: string;
     riskImpact: string;
     negotiationLeverage: string;
+    precedents?: string;
   };
   synthesis?: {
     recommendation: string;
     confidence: number;
     reasoning: string;
+    primaryAction: string;
+    fallbackPosition: string;
+    walkAwayThreshold?: string;
+    priorityRank?: number;
   };
   redline?: string;
+}
+
+export type IssueCategory =
+  | 'economics'
+  | 'control'
+  | 'governance'
+  | 'protective_provisions'
+  | 'information_rights'
+  | 'transfer_restrictions'
+  | 'exit_mechanisms'
+  | 'representations'
+  | 'missing_provision'
+  | 'definitional'
+  | 'procedural'
+  | 'other';
+
+export interface DefinedTerm {
+  term: string;
+  definition: string;
+  section: string;
+  crossReferences: string[];
+  isStandard: boolean;
+  concerns?: string;
 }
 
 export interface ParsedSection {
   heading: string;
   clauseCount: number;
   content: string;
+  operativeVerbs?: string[];
+  crossReferences?: string[];
+  blankFields?: string[];
+  deviationFromStandard?: string;
+}
+
+export interface MissingProvision {
+  provision: string;
+  importance: 'critical' | 'high' | 'medium' | 'low' | 'important' | 'recommended' | 'optional';
+  explanation: string;
+  standardLanguage?: string;
+}
+
+export interface ConflictCheck {
+  cleared: boolean;
+  partiesChecked: string[];
+  potentialConflicts: string[];
+  waiverRequired: boolean;
+  notes: string;
+}
+
+export interface EngagementScope {
+  clientName: string;
+  matterDescription: string;
+  scopeOfWork: string[];
+  limitations: string[];
+  assumptions: string[];
+  estimatedTimeline: string;
+  qualifications: string[];
 }
 
 export interface GuardrailResult {
@@ -59,6 +120,9 @@ export interface GuardrailResult {
   confidenceThreshold: { score: number; required: number; pass: boolean };
   escalationRequired: boolean;
   escalationReason?: string;
+  hallucinationCheck?: 'pass' | 'warning' | 'fail';
+  scopeComplianceCheck?: 'pass' | 'warning' | 'fail';
+  ethicsCheck?: 'pass' | 'warning' | 'fail';
 }
 
 export interface Deliverable {
@@ -93,8 +157,16 @@ export interface Matter {
   currentStage: StageId | null;
   overallConfidence: number;
 
-  // Stage outputs
+  // Intake outputs
+  conflictCheck?: ConflictCheck;
+  engagementScope?: EngagementScope;
+
+  // Parsing outputs
   parsedSections: ParsedSection[];
+  definedTerms?: DefinedTerm[];
+  missingProvisions?: MissingProvision[];
+
+  // Analysis outputs
   issues: Issue[];
   guardrails: GuardrailResult | null;
   deliverables: Deliverable[];
@@ -103,6 +175,7 @@ export interface Matter {
   // Adversarial review
   adversarialCritiques: string[];
   draftRevised: boolean;
+  adversarialLoopCount: number;
 
   // Final status
   status: 'processing' | 'complete' | 'error';

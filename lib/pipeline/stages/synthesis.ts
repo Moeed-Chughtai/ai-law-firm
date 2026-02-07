@@ -6,6 +6,10 @@ interface SynthesisResult {
   recommendation: string;
   confidence: number;
   reasoning: string;
+  primaryAction: string;
+  fallbackPosition: string;
+  walkAwayThreshold: string;
+  priorityRank: number;
 }
 
 async function synthesizeSingleIssue(
@@ -22,10 +26,11 @@ async function synthesizeSingleIssue(
 **Your Synthesis Framework — The "Partner Decision Protocol":**
 
 1. **Evidence Triangulation**
-   Weigh all three research inputs (market norms, risk impact, negotiation leverage) and identify:
+   Weigh all four research inputs (market norms, risk impact, negotiation leverage, legal precedent) and identify:
    - Where they AGREE: high-confidence signal → decisive recommendation
    - Where they DISAGREE: flag the tension, explain which perspective you weight more heavily and WHY
    - What's MISSING: identify any information gaps that affect your confidence
+   - Whether the legal authority supports or undermines the negotiation position
 
 2. **Decision Architecture**
    Structure your recommendation using this hierarchy:
@@ -71,8 +76,11 @@ Synthesize all research into a single, authoritative recommendation that the cli
 
 **Issue:** ${issue.title}
 **Severity:** ${issue.severity}
+**Category:** ${issue.category || 'Not categorized'}
 **Clause Reference:** ${issue.clauseRef}
 **Initial Analysis:** ${issue.explanation}
+**Standard Form Deviation:** ${issue.standardFormDeviation || 'Not specified'}
+**Cross-Clause Interactions:** ${issue.interactionEffects?.join('; ') || 'None identified'}
 
 **RESEARCH INPUTS:**
 
@@ -85,6 +93,9 @@ ${issue.research.riskImpact}
 🤝 **Negotiation Strategy (Specialist 3):**
 ${issue.research.negotiationLeverage}
 
+⚖️ **Legal Authority & Precedent (Specialist 4):**
+${issue.research.precedents || 'No legal precedent research available'}
+
 **DEAL CONTEXT:**
 - Document Type: ${isSafe ? 'SAFE' : 'Term Sheet'}
 - Risk Tolerance: ${matter.riskTolerance.toUpperCase()}
@@ -93,9 +104,13 @@ ${issue.research.negotiationLeverage}
 
 Return JSON:
 {
-  "recommendation": "${audienceIsFounder ? 'Complete recommendation in 4-6 sentences. Structure: (1) Clear action verb opening — what to DO, (2) The specific ask with exact numbers or language, (3) The fallback position if the primary ask is rejected, (4) Why this matters in practical/dollar terms, (5) How to bring this up with the investor (tone, timing, framing). Must be plain English a non-lawyer can understand and act on immediately.' : 'Complete recommendation in 4-6 sentences. Structure: (1) Legal standard and how this deviates, (2) Proposed markup language with exact clause modifications, (3) Legal basis (NVCA model, Del. Code, case law), (4) Strategic sequencing recommendation, (5) Fallback position and minimum acceptable terms. Must be technical and actionable for experienced counsel.'}",
+  "recommendation": "${audienceIsFounder ? 'Complete recommendation in 4-6 sentences. Structure: (1) Clear action verb opening — what to DO, (2) The specific ask with exact numbers or language, (3) The fallback position if the primary ask is rejected, (4) Why this matters in practical/dollar terms, (5) How to bring this up with the investor (tone, timing, framing). Must be plain English.' : 'Complete recommendation in 4-6 sentences. Structure: (1) Legal standard and how this deviates, (2) Proposed markup language with exact clause modifications, (3) Legal basis (NVCA model, Del. Code, case law), (4) Strategic sequencing recommendation, (5) Fallback position and minimum acceptable terms.'}",
+  "primaryAction": "Single sentence: the ONE most important thing the client should do about this issue. Start with an action verb. E.g., 'Push back on the $8M valuation cap and counter-propose $12M based on current pre-seed market median.' or 'Accept this clause as-is — it meets market standard.'",
+  "fallbackPosition": "If the primary ask is rejected, what is the acceptable compromise? Be specific. E.g., 'Accept $10M cap if investor agrees to remove the 25% discount.' or 'Agree to full ratchet only if it includes a pay-to-play provision.'",
+  "walkAwayThreshold": "At what point should the client refuse to proceed on this specific issue? E.g., 'Any cap below $8M combined with a discount above 20% creates unacceptable dilution.' or 'Full ratchet without any sunset or threshold is a deal-breaker at any valuation.'",
+  "priorityRank": 1-5 (1 = negotiate first/most important, 5 = raise last/least important. Consider: severity, economic impact, likelihood of success, strategic positioning),
   "confidence": 0.XX,
-  "reasoning": "3-4 sentences explaining: (1) The key evidence that drives your recommendation, (2) What happens if the client takes NO action — the specific downside scenario with numbers, (3) Any important caveats or conditions that affect this advice, (4) How this recommendation interacts with other issues in the document"
+  "reasoning": "3-4 sentences explaining: (1) The key evidence from all four specialists that drives your recommendation, (2) What happens if the client takes NO action — the specific downside scenario with numbers, (3) Any important caveats or conditions, (4) How this recommendation interacts with other issues in the document"
 }`;
 
   const result = await callLLMJSON<SynthesisResult>(

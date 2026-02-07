@@ -65,6 +65,11 @@ export async function POST(request: NextRequest) {
       adversarialCritiques: [],
       draftRevised: false,
       status: 'processing',
+      adversarialLoopCount: 0,
+      conflictCheck: undefined,
+      engagementScope: undefined,
+      definedTerms: [],
+      missingProvisions: [],
     };
 
     await setMatter(matter);

@@ -52,6 +52,9 @@ export async function runAdversarialReview(
 
 Minor calibration disagreements (e.g., "I'd rate this medium, not low") do NOT warrant revision — note them but don't flag draftRevised.`;
 
+  const isReviewLoop = (matter.adversarialLoopCount || 0) > 0;
+  const priorCritiques = matter.adversarialCritiques || [];
+
   const issuesSummary = matter.issues
     .map((i, idx) => {
       let details = `### Issue ${idx + 1}: ${i.title}
@@ -74,9 +77,20 @@ Minor calibration disagreements (e.g., "I'd rate this medium, not low") do NOT w
     })
     .join('\n\n---\n\n');
 
-  const userPrompt = `**ADVERSARIAL RED TEAM REVIEW — FULL ANALYSIS PACKAGE**
+  const userPrompt = `**ADVERSARIAL RED TEAM REVIEW — FULL ANALYSIS PACKAGE${isReviewLoop ? ` (REVISION ROUND ${matter.adversarialLoopCount})` : ''}**
 
 Conduct a rigorous three-level adversarial review of this complete ${docName} analysis before client delivery.
+${isReviewLoop ? `
+**⚠️ THIS IS A REVISION REVIEW (Round ${matter.adversarialLoopCount})**
+The drafting team has revised their work based on your prior critique. Your prior findings were:
+${priorCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+
+You must assess:
+1. Were your prior material concerns adequately addressed in the revised drafts?
+2. Did the revision introduce any NEW problems?
+3. Has the overall quality improved to an acceptable standard?
+4. Set draftRevised to TRUE only if material problems STILL REMAIN after revision.
+` : ''}
 
 **DOCUMENT METADATA:**
 - Document Type: ${docName}
@@ -127,6 +141,9 @@ Return JSON:
               loopbackOccurred: result.draftRevised,
               draftRevised: result.draftRevised,
               revisionReason: result.revisionReason,
+              reviewRound: (matter.adversarialLoopCount || 0) + (isReviewLoop ? 0 : 0),
+              isRevisionReview: isReviewLoop,
+              priorCritiquesAddressed: isReviewLoop ? !result.draftRevised : undefined,
             },
           }
         : s

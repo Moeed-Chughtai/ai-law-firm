@@ -11,6 +11,7 @@ interface ResearchData {
   marketNorms: string;
   riskImpact: string;
   negotiationLeverage: string;
+  precedents: string;
 }
 
 interface ResearchResult {
@@ -25,7 +26,7 @@ async function researchSingleIssue(
   const docName = isSafe ? 'SAFE (Simple Agreement for Future Equity)' : 'Series A Preferred Stock Term Sheet';
   const audienceIsFounder = matter.audience === 'founder';
 
-  const systemPrompt = `You are a council of three world-class specialists performing deep-dive research on a specific legal issue found in a ${docName}. Each specialist operates independently and contributes their unique expertise, but their combined output forms a cohesive research brief.
+  const systemPrompt = `You are a council of four world-class specialists performing deep-dive research on a specific legal issue found in a ${docName}. Each specialist operates independently and contributes their unique expertise, but their combined output forms a cohesive research brief that mirrors how a real Big Law deal team researches issues.
 
 **SPECIALIST 1 — Market Intelligence Analyst**
 Profile: Former head of data analytics at Carta with a JD from Stanford. You maintain the most comprehensive private database of venture deal terms in the industry. You personally audit 500+ financing rounds per quarter and publish the authoritative market reports that lawyers and VCs cite.
@@ -58,7 +59,25 @@ Your research methodology:
 - ${audienceIsFounder ? 'Provide a script: "You could say to the investor: [exact words]". Include the emotional/relational framing, not just legal arguments.' : 'Provide markup language and cite precedent for why the counter-position is standard.'}
 - Consider package dealing: what could be traded for concession on this term?
 
-**Cross-Specialist Integration Rule:** Each specialist should acknowledge what the others would find and ensure no contradictions. If market data suggests a term is standard, the negotiation specialist should adjust their strategy accordingly.`;
+**SPECIALIST 4 — Legal Precedent & Authority Researcher (NEW — mirrors real firm memo research)**
+Profile: Senior associate and head of the firm's legal research team. You clerked at the Delaware Court of Chancery and are the go-to authority on corporate governance litigation. You have access to Westlaw, LexisNexis, and the firm's internal precedent database.
+
+Your research methodology:
+- Identify the controlling legal authority for this issue (statute, regulation, case law)
+- ${isSafe ? `Reference relevant Delaware case law on SAFE enforceability and conversion disputes
+  - Cite DGCL provisions that apply to the conversion mechanics
+  - Note any SEC no-action letters or guidance on SAFE treatment
+  - Reference relevant IRS guidance on tax treatment of SAFEs
+  - Identify any pending legislation or regulatory changes that could affect this term` : `Reference key Delaware cases on preferred stock rights (e.g., In re Trados, SV Inv. Partners v. ThoughtWorks)
+  - Cite specific DGCL sections (§§ 141, 151, 202, 242, 251)
+  - Note fiduciary duty implications (Revlon duties, entire fairness standard)
+  - Reference relevant SEC guidance on disclosure and registration
+  - Identify any recent Delaware Court of Chancery decisions affecting these provisions`}
+- Distinguish between binding authority and persuasive authority
+- Note any circuit splits or areas of legal uncertainty
+- Provide the weight of authority: "Well-settled law" vs. "Emerging area" vs. "Unsettled/disputed"
+
+**Cross-Specialist Integration Rule:** Each specialist should acknowledge what the others would find and ensure no contradictions. If market data suggests a term is standard, the negotiation specialist should adjust their strategy accordingly. The legal authority specialist should validate that proposed negotiation positions are legally sound.`;
 
   // Retrieve context for all three research types in parallel
   let marketContext: any[] = [];
@@ -79,13 +98,17 @@ Your research methodology:
 
   const userPrompt = `**RESEARCH BRIEF REQUEST — ${issue.severity.toUpperCase()} SEVERITY ISSUE**
 
-Perform comprehensive three-specialist research on the following issue identified during legal review:
+Perform comprehensive four-specialist research on the following issue identified during legal review:
 
 **Issue Title:** ${issue.title}
 **Severity:** ${issue.severity}
+**Category:** ${issue.category || 'Not categorized'}
 **Clause Reference:** ${issue.clauseRef}
 **Analysis Summary:** ${issue.explanation}
 **Confidence Level:** ${issue.confidence}
+**Standard Form Deviation:** ${issue.standardFormDeviation || 'Not specified'}
+**Cross-Clause Interactions:** ${issue.interactionEffects?.join('; ') || 'None identified'}
+**Statutory Basis:** ${issue.statutoryBasis || 'Not specified'}
 
 **Full Document Context (for cross-reference):**
 ${matter.documentText.substring(0, 2500)}
@@ -108,7 +131,7 @@ ${formatChunksForPrompt(leverageContext)}
 
 Use these references to ground your analysis, but supplement with your broader expertise.` : ''}
 
-**DELIVER THREE SPECIALIST REPORTS:**
+**DELIVER FOUR SPECIALIST REPORTS:**
 
 **Specialist 1 — Market Intelligence Report:**
 Provide 5-7 sentences covering: (a) The exact market standard for this term with percentile data, (b) How this document's term compares — is it at 25th, 50th, 75th, or 99th percentile?, (c) Segmented data by deal stage and geography where relevant, (d) Recent trend direction (is market moving toward or away from this term?), (e) Any notable reference points (e.g., "YC's standard post-money SAFE uses X", "NVCA model language says Y").
@@ -119,19 +142,23 @@ Provide 5-7 sentences covering: (a) Concrete economic impact modeled at ${isSafe
 **Specialist 3 — Negotiation Strategy Report:**
 Provide 5-7 sentences covering: (a) A SPECIFIC counter-proposal with exact terms/numbers/language to propose, (b) Success likelihood assessment with reasoning, (c) The BATNA — what is the walk-away point and what's the cost of accepting vs. walking?, (d) ${audienceIsFounder ? 'A suggested script for the conversation with the investor, including tone/framing' : 'Proposed markup language with legal justification'}, (e) Package deal opportunities — what could be traded for this concession?, (f) Whether to negotiate this early (signal importance) or late (horse-trading leverage).
 
+**Specialist 4 — Legal Authority & Precedent Report:**
+Provide 5-7 sentences covering: (a) The controlling legal authority (statutes, regulations, case law) that governs this issue, (b) ${isSafe ? 'Relevant DGCL provisions, SEC guidance, or IRS treatment of SAFEs' : 'Specific DGCL sections, Delaware Court of Chancery decisions, and fiduciary duty standards'}, (c) How courts have treated disputes involving similar provisions, (d) Whether the proposed recommendation is on solid legal ground, (e) Any areas of legal uncertainty or unsettled law that affect confidence, (f) Weight of authority assessment: "well-settled" vs "emerging" vs "uncertain/disputed".
+
 Return JSON:
 {
   "research": {
     "marketNorms": "Complete Specialist 1 report as a single paragraph",
     "riskImpact": "Complete Specialist 2 report as a single paragraph",
-    "negotiationLeverage": "Complete Specialist 3 report as a single paragraph"
+    "negotiationLeverage": "Complete Specialist 3 report as a single paragraph",
+    "precedents": "Complete Specialist 4 report as a single paragraph"
   }
 }`;
 
   const result = await callLLMJSON<ResearchResult>(
     systemPrompt,
     userPrompt,
-    { temperature: 0.3, maxTokens: 3000 }
+    { temperature: 0.3, maxTokens: 4000 }
   );
 
   // Store citations in background (don't block)
@@ -190,8 +217,8 @@ export async function runResearch(matter: Matter): Promise<Partial<Matter>> {
           ? {
               ...s,
               data: {
-                completedAgents: researchedIssues.filter((i) => i.research).length * 3,
-                totalAgents: issues.length * 3,
+                completedAgents: researchedIssues.filter((i) => i.research).length * 4,
+                totalAgents: issues.length * 4,
                 parallelRuns: Math.min(BATCH_SIZE, batch.length),
                 issues: updatedIssues,
               },

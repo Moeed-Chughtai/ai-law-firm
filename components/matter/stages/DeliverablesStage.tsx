@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Shield,
+  Scale,
 } from 'lucide-react';
 
 interface Props {
@@ -24,6 +25,14 @@ const FORMAT_ICONS: Record<string, React.ElementType> = {
 const FORMAT_COLORS: Record<string, string> = {
   Markdown: 'bg-brand-50 text-brand-700',
   JSON: 'bg-warning-50 text-warning-700',
+};
+
+const DELIVERABLE_ICONS: Record<string, React.ElementType> = {
+  'Engagement Letter': Scale,
+  'Issue Memorandum': FileText,
+  'Annotated Document': FileText,
+  'Risk Summary': FileJson,
+  'Audit Log': Clock,
 };
 
 export default function DeliverablesStage({ matter, stage }: Props) {
@@ -73,7 +82,7 @@ export default function DeliverablesStage({ matter, stage }: Props) {
       {/* Summary metrics */}
       <div>
         <h4 className="section-label mb-3">Deliverable summary</h4>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="metric-card text-center">
             <div className="text-xl font-semibold text-gray-900 tabular-nums">{deliverables.length}</div>
             <div className="text-[11px] text-gray-500">Documents ready</div>
@@ -89,6 +98,12 @@ export default function DeliverablesStage({ matter, stage }: Props) {
               {deliverables.filter((d) => d.format === 'JSON').length}
             </div>
             <div className="text-[11px] text-gray-500">Structured data</div>
+          </div>
+          <div className="metric-card text-center">
+            <div className="text-xl font-semibold text-success-600 tabular-nums">
+              {matter.stages.length}
+            </div>
+            <div className="text-[11px] text-gray-500">Stages completed</div>
           </div>
         </div>
       </div>

@@ -118,26 +118,28 @@ export default function MatterPage() {
       </nav>
 
       {/* ── Main Layout: Sidebar + Content ── */}
-      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-5 grid grid-cols-12 gap-6 h-[calc(100vh-56px)] overflow-hidden">
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-5 grid grid-cols-12 gap-6 items-start">
 
         {/* Left Sidebar — Timeline + Trust */}
-        <aside className="hidden lg:flex lg:col-span-3 h-full flex-col gap-4">
-          <div className="card overflow-y-auto flex flex-col" style={{ height: 'calc(100% - 240px)' }}>
-            <Timeline
-              stages={matter.stages}
-              currentStage={matter.currentStage}
-              selectedStage={activeStageId}
-              onSelectStage={handleStageSelect}
-            />
+        <aside className="hidden lg:flex lg:col-span-3 sticky top-[72px] flex-col gap-4" style={{ maxHeight: 'calc(100vh - 88px)' }}>
+          <div className="card overflow-hidden flex flex-col" style={{ height: '65vh', maxHeight: '600px' }}>
+            <div className="overflow-y-auto flex-1">
+              <Timeline
+                stages={matter.stages}
+                currentStage={matter.currentStage}
+                selectedStage={activeStageId}
+                onSelectStage={handleStageSelect}
+              />
+            </div>
           </div>
-          <div className="card p-4 h-[220px] shrink-0 overflow-y-auto">
+          <div className="card p-4 overflow-hidden flex flex-col" style={{ height: 'calc(35vh - 1rem)', maxHeight: '300px' }}>
             <TrustPanel matter={matter} />
           </div>
         </aside>
 
         {/* Center Content — Stage Detail */}
-        <main className="col-span-12 lg:col-span-9 h-full overflow-y-auto">
-          <div className="card min-h-full p-8">
+        <main className="col-span-12 lg:col-span-9">
+          <div className="card p-8">
             <StageDetail matter={matter} activeStage={activeStage} />
           </div>
         </main>

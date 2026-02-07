@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Scale,
@@ -33,11 +33,58 @@ export default function IntakePage() {
   const [fileName, setFileName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Legal knowledge base upload state
+  const [showKnowledgeUpload, setShowKnowledgeUpload] = useState(false);
+  const [knowledgeFiles, setKnowledgeFiles] = useState<File[]>([]);
+  const [knowledgeDocType, setKnowledgeDocType] = useState<'statute' | 'case_law' | 'standard_form' | 'practice_guide' | 'firm_knowledge' | 'regulation' | 'other'>('other');
+  const [knowledgeUploading, setKnowledgeUploading] = useState(false);
+  const [knowledgeUploadSuccess, setKnowledgeUploadSuccess] = useState('');
+  const [knowledgeStats, setKnowledgeStats] = useState<Record<string, number>>({});
+
+  // Fetch knowledge base stats on mount
+  useEffect(() => {
+    fetch('/api/legal-docs?stats=true')
+      .then(res => res.json())
+      .then(data => setKnowledgeStats(data.stats || {}))
+      .catch(() => {});
+  }, []);
 
   const handleFileUpload = async (file: File) => {
     setFileName(file.name);
-    const text = await file.text();
-    setDocumentText(text);
+    setUploadError('');
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (ext === 'pdf') {
+      // Server-side PDF text extraction
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/parse-pdf', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setUploadError(data.error || 'Failed to parse PDF');
+          setFileName('');
+          return;
+        }
+        setDocumentText(data.text);
+      } catch (err) {
+        setUploadError('Failed to upload file. Please try again.');
+        setFileName('');
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      // Plain text / docx — read directly
+      const text = await file.text();
+      setDocumentText(text);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -45,6 +92,45 @@ export default function IntakePage() {
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFileUpload(file);
+  };
+
+  const handleKnowledgeUpload = async () => {
+    if (knowledgeFiles.length === 0) return;
+
+    setKnowledgeUploading(true);
+    setKnowledgeUploadSuccess('');
+
+    try {
+      const formData = new FormData();
+      knowledgeFiles.forEach(file => formData.append('files', file));
+      formData.append('docType', knowledgeDocType);
+
+      const res = await fetch('/api/legal-docs', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      setKnowledgeUploadSuccess(
+        `✅ Successfully ingested ${data.documentsIngested} document(s) with ${data.totalChunks} chunks`
+      );
+      setKnowledgeFiles([]);
+      
+      // Refresh stats
+      const statsRes = await fetch('/api/legal-docs?stats=true');
+      const statsData = await statsRes.json();
+      setKnowledgeStats(statsData.stats || {});
+
+    } catch (error) {
+      setKnowledgeUploadSuccess(`❌ ${error instanceof Error ? error.message : 'Upload failed'}`);
+    } finally {
+      setKnowledgeUploading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -73,7 +159,7 @@ export default function IntakePage() {
     }
   };
 
-  const hasDocument = documentText.trim().length > 0 || fileName.length > 0;
+  const hasDocument = documentText.trim().length > 0;
 
   return (
     <div className="min-h-screen">
@@ -86,12 +172,131 @@ export default function IntakePage() {
             </div>
             <span className="font-semibold text-base text-gray-900">LexForge</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Lock className="w-3 h-3" />
-            <span>End-to-end encrypted</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowKnowledgeUpload(!showKnowledgeUpload)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Legal Knowledge Base
+            </button>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Lock className="w-3 h-3" />
+              <span>End-to-end encrypted</span>
+            </div>
           </div>
         </div>
       </nav>
+
+      {/* ── Knowledge Base Upload Section (Collapsible) ── */}
+      {showKnowledgeUpload && (
+        <div className="bg-blue-50 border-b border-blue-200">
+          <div className="max-w-[1140px] mx-auto px-6 py-6">
+            <div className="bg-white rounded-lg border border-blue-200 p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    Upload Legal Documents to Knowledge Base
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Add statutes, case law, standard forms, and practice guides to enhance RAG retrieval
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowKnowledgeUpload(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Document Type Selector */}
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-700 mb-2">Document Type</label>
+                <select
+                  value={knowledgeDocType}
+                  onChange={(e) => setKnowledgeDocType(e.target.value as any)}
+                  className="input-field text-xs"
+                >
+                  <option value="statute">Statute (DGCL, UCC, Securities Act)</option>
+                  <option value="case_law">Case Law (Court decisions, precedents)</option>
+                  <option value="standard_form">Standard Form (NVCA, ABA templates)</option>
+                  <option value="practice_guide">Practice Guide (Treatises, commentaries)</option>
+                  <option value="firm_knowledge">Firm Knowledge (Internal memos, playbooks)</option>
+                  <option value="regulation">Regulation (SEC rules, state regs)</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* File Upload */}
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-700 mb-2">Select Files</label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".txt,.md,.pdf"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setKnowledgeFiles(files);
+                    setKnowledgeUploadSuccess('');
+                  }}
+                  className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {knowledgeFiles.length > 0 && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    {knowledgeFiles.length} file(s) selected: {knowledgeFiles.map(f => f.name).join(', ')}
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Button */}
+              <button
+                onClick={handleKnowledgeUpload}
+                disabled={knowledgeFiles.length === 0 || knowledgeUploading}
+                className={`w-full py-2 rounded-md text-xs font-semibold transition-all ${
+                  knowledgeFiles.length > 0 && !knowledgeUploading
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {knowledgeUploading ? (
+                  <>
+                    <div className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Ingesting documents...
+                  </>
+                ) : (
+                  `Ingest ${knowledgeFiles.length || 0} document(s) into RAG`
+                )}
+              </button>
+
+              {/* Success/Error Message */}
+              {knowledgeUploadSuccess && (
+                <div className={`mt-3 p-2 rounded text-xs ${
+                  knowledgeUploadSuccess.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                }`}>
+                  {knowledgeUploadSuccess}
+                </div>
+              )}
+
+              {/* Knowledge Base Stats */}
+              {Object.keys(knowledgeStats).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Current Knowledge Base:</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {Object.entries(knowledgeStats).map(([type, count]) => (
+                      <div key={type} className="text-center p-2 bg-gray-50 rounded">
+                        <div className="text-lg font-semibold text-gray-900">{count}</div>
+                        <div className="text-xs text-gray-500 capitalize">{type.replace('_', ' ')}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-[1140px] mx-auto px-6 py-16">
         {/* ── Page Header ── */}
@@ -184,11 +389,23 @@ export default function IntakePage() {
 
                 {fileName ? (
                   <div className="text-center animate-fade-in">
-                    <div className="w-10 h-10 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <CheckCircle2 className="w-5 h-5 text-success-600" />
-                    </div>
-                    <p className="text-sm font-medium text-gray-900">{fileName}</p>
-                    <p className="text-xs text-success-600 mt-1">Ready for analysis</p>
+                    {isUploading ? (
+                      <>
+                        <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <div className="w-5 h-5 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">{fileName}</p>
+                        <p className="text-xs text-brand-600 mt-1">Extracting text from PDF…</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-10 h-10 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <CheckCircle2 className="w-5 h-5 text-success-600" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">{fileName}</p>
+                        <p className="text-xs text-success-600 mt-1">Ready for analysis</p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center">
@@ -202,6 +419,13 @@ export default function IntakePage() {
                   </div>
                 )}
               </div>
+
+              {uploadError && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-error-50 border border-error-200 mt-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-error-600 shrink-0" />
+                  <p className="text-xs text-error-700">{uploadError}</p>
+                </div>
+              )}
 
               <details className="group">
                 <summary className="list-none text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-1 py-1 select-none">
@@ -268,9 +492,9 @@ export default function IntakePage() {
             <div className="space-y-4 pt-2">
               <button
                 onClick={handleSubmit}
-                disabled={!hasDocument || isSubmitting}
+                disabled={!hasDocument || isSubmitting || isUploading}
                 className={`w-full py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-150 ${
-                  hasDocument && !isSubmitting
+                  hasDocument && !isSubmitting && !isUploading
                     ? 'bg-brand-600 text-white hover:bg-brand-700 shadow-xs'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}

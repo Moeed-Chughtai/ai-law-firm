@@ -32,6 +32,11 @@ export async function getMatter(id: string): Promise<Matter | undefined> {
     auditLog: row.audit_log || [],
     adversarialCritiques: row.adversarial_critiques || [],
     draftRevised: row.draft_revised || false,
+    adversarialLoopCount: row.adversarial_loop_count || 0,
+    conflictCheck: row.conflict_check || undefined,
+    engagementScope: row.engagement_scope || undefined,
+    definedTerms: row.defined_terms || [],
+    missingProvisions: row.missing_provisions || [],
   };
 }
 
@@ -41,8 +46,10 @@ export async function setMatter(matter: Matter): Promise<void> {
       id, created_at, doc_type, jurisdiction, risk_tolerance, audience,
       document_text, file_name, status, current_stage, overall_confidence,
       stages, parsed_sections, issues, guardrails, deliverables,
-      audit_log, adversarial_critiques, draft_revised
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      audit_log, adversarial_critiques, draft_revised,
+      adversarial_loop_count, conflict_check, engagement_scope,
+      defined_terms, missing_provisions
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
     ON CONFLICT (id) DO UPDATE SET
       status = EXCLUDED.status,
       current_stage = EXCLUDED.current_stage,
@@ -54,7 +61,12 @@ export async function setMatter(matter: Matter): Promise<void> {
       deliverables = EXCLUDED.deliverables,
       audit_log = EXCLUDED.audit_log,
       adversarial_critiques = EXCLUDED.adversarial_critiques,
-      draft_revised = EXCLUDED.draft_revised`,
+      draft_revised = EXCLUDED.draft_revised,
+      adversarial_loop_count = EXCLUDED.adversarial_loop_count,
+      conflict_check = EXCLUDED.conflict_check,
+      engagement_scope = EXCLUDED.engagement_scope,
+      defined_terms = EXCLUDED.defined_terms,
+      missing_provisions = EXCLUDED.missing_provisions`,
     [
       matter.id,
       matter.createdAt,
@@ -75,6 +87,11 @@ export async function setMatter(matter: Matter): Promise<void> {
       JSON.stringify(matter.auditLog),
       JSON.stringify(matter.adversarialCritiques || []),
       matter.draftRevised,
+      matter.adversarialLoopCount || 0,
+      matter.conflictCheck ? JSON.stringify(matter.conflictCheck) : null,
+      matter.engagementScope ? JSON.stringify(matter.engagementScope) : null,
+      JSON.stringify(matter.definedTerms || []),
+      JSON.stringify(matter.missingProvisions || []),
     ]
   );
 }
@@ -116,5 +133,10 @@ export async function getAllMatters(): Promise<Matter[]> {
     auditLog: row.audit_log || [],
     adversarialCritiques: row.adversarial_critiques || [],
     draftRevised: row.draft_revised || false,
+    adversarialLoopCount: row.adversarial_loop_count || 0,
+    conflictCheck: row.conflict_check || undefined,
+    engagementScope: row.engagement_scope || undefined,
+    definedTerms: row.defined_terms || [],
+    missingProvisions: row.missing_provisions || [],
   }));
 }
