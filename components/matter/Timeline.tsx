@@ -16,6 +16,8 @@ import {
   XCircle,
   Clock,
   Loader2,
+  Circle,
+  ArrowRight,
 } from 'lucide-react';
 
 const STAGE_ICONS: Record<StageId, React.ElementType> = {
@@ -30,16 +32,16 @@ const STAGE_ICONS: Record<StageId, React.ElementType> = {
   deliverables: Package,
 };
 
-const STAGE_DESCRIPTIONS: Record<StageId, string> = {
-  intake: 'Scope & accept matter',
-  parsing: 'Extract document structure',
-  issue_analysis: 'Detect legal issues',
-  research: 'Agent swarm analysis',
-  synthesis: 'Form recommendations',
-  drafting: 'Generate redlines',
-  adversarial_review: 'Internal challenge',
-  guardrails: 'Safety & approval',
-  deliverables: 'Package outputs',
+const STAGE_LABELS: Record<StageId, string> = {
+  intake: 'Intake & Scoping',
+  parsing: 'Document Extraction',
+  issue_analysis: 'Issue Spotting',
+  research: 'Legal Research',
+  synthesis: 'Analysis Synthesis',
+  drafting: 'Redlining & Drafting',
+  adversarial_review: 'Adversarial Review',
+  guardrails: 'Safety Guardrails',
+  deliverables: 'Final Deliverables',
 };
 
 interface TimelineProps {
@@ -56,119 +58,83 @@ export default function Timeline({
   onSelectStage,
 }: TimelineProps) {
   return (
-    <div className="p-5">
-      <div className="mb-6">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Legal Workflow
+    <div className="p-4 py-6">
+      <div className="flex items-center gap-2 mb-6 px-3">
+         <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          Analysis Pipeline
         </h2>
       </div>
 
-      <div className="space-y-1">
+      <div className="relative space-y-0">
+        {/* Continuous Line */}
+        <div className="absolute left-[27px] top-4 bottom-4 w-px bg-slate-200 z-0" />
+
         {stages.map((stage, index) => {
           const Icon = STAGE_ICONS[stage.id];
           const isSelected = selectedStage === stage.id;
-          const isLast = index === stages.length - 1;
-
+          const isActive = stage.status === 'running';
+          const isCompleted = stage.status === 'complete' || stage.status === 'warning';
+          
           return (
-            <div key={stage.id} className="relative">
-              {/* Connector line */}
-              {!isLast && (
-                <div
-                  className={`absolute left-[19px] top-[44px] w-[2px] h-[calc(100%-8px)] ${
-                    stage.status === 'complete' || stage.status === 'warning'
-                      ? 'bg-emerald-200'
-                      : stage.status === 'running'
-                        ? 'bg-gradient-to-b from-brand-300 to-surface-200'
-                        : 'bg-surface-200'
-                  }`}
-                />
-              )}
-
+            <div key={stage.id} className="relative z-10">
               <button
                 onClick={() => onSelectStage(stage.id)}
-                className={`relative w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group ${
+                className={`w-full flex items-center gap-4 p-3 rounded-lg transition-all group ${
                   isSelected
-                    ? 'bg-brand-50/80 ring-1 ring-brand-200'
-                    : 'hover:bg-surface-100'
+                    ? 'bg-slate-50'
+                    : 'hover:bg-slate-50'
                 }`}
               >
-                {/* Status indicator */}
+                {/* Status Dot */}
                 <div
-                  className={`relative w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    stage.status === 'running'
-                      ? 'bg-brand-100'
-                      : stage.status === 'complete'
-                        ? 'bg-emerald-100'
-                        : stage.status === 'warning'
-                          ? 'bg-amber-100'
-                          : stage.status === 'blocked'
-                            ? 'bg-red-100'
-                            : 'bg-surface-100'
+                  className={`relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all border-2 ${
+                    isActive
+                      ? 'bg-white border-accent-500 shadow-md shadow-accent-500/20'
+                      : isCompleted
+                        ? 'bg-emerald-500 border-emerald-500'
+                        : isSelected
+                            ? 'bg-white border-slate-900'
+                            : 'bg-white border-slate-200'
                   }`}
                 >
-                  {stage.status === 'running' ? (
-                    <Loader2 className="w-3 h-3 text-brand-600 animate-spin" />
-                  ) : stage.status === 'complete' ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  ) : stage.status === 'warning' ? (
-                    <AlertTriangle className="w-3 h-3 text-amber-600" />
-                  ) : stage.status === 'blocked' ? (
-                    <XCircle className="w-3 h-3 text-red-600" />
+                  {isActive ? (
+                    <Loader2 className="w-3.5 h-3.5 text-accent-600 animate-spin" />
+                  ) : isCompleted ? (
+                    <CheckCircle2 className="w-4 h-4 text-white" />
                   ) : (
-                    <div className="w-2 h-2 rounded-full bg-surface-300" />
-                  )}
-
-                  {stage.status === 'running' && (
-                    <div className="absolute inset-0 rounded-full border-2 border-brand-400 animate-ping opacity-30" />
+                    <span className={`text-[10px] font-medium ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>
+                        {index + 1}
+                    </span>
                   )}
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Icon
-                      className={`w-3.5 h-3.5 flex-shrink-0 ${
-                        stage.status === 'running'
-                          ? 'text-brand-600'
-                          : stage.status === 'complete'
-                            ? 'text-emerald-600'
-                            : stage.status === 'warning'
-                              ? 'text-amber-600'
-                              : isSelected
-                                ? 'text-brand-500'
-                                : 'text-gray-400'
-                      }`}
-                    />
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center justify-between">
                     <span
-                      className={`text-sm font-medium truncate ${
-                        stage.status === 'running'
-                          ? 'text-brand-700'
-                          : stage.status === 'complete' || stage.status === 'warning'
-                            ? 'text-gray-900'
+                      className={`text-sm font-medium truncate transition-colors ${
+                        isActive
+                            ? 'text-accent-700'
                             : isSelected
-                              ? 'text-brand-700'
-                              : 'text-gray-500'
+                                ? 'text-slate-900'
+                                : isCompleted ? 'text-slate-700' : 'text-slate-500'
                       }`}
                     >
-                      {stage.label}
+                      {STAGE_LABELS[stage.id] || stage.label}
                     </span>
+                    {isActive && (
+                        <span className="flex h-2 w-2 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-500"></span>
+                        </span>
+                    )}
                   </div>
-                  <p
-                    className={`text-[11px] mt-0.5 ${
-                      stage.status === 'running'
-                        ? 'text-brand-500'
-                        : 'text-gray-400'
-                    }`}
-                  >
-                    {STAGE_DESCRIPTIONS[stage.id]}
-                  </p>
+                  
                   {stage.completedAt && (
-                    <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5" />
-                      {stage.startedAt
-                        ? `${((new Date(stage.completedAt).getTime() - new Date(stage.startedAt).getTime()) / 1000).toFixed(1)}s`
-                        : new Date(stage.completedAt).toLocaleTimeString()}
-                    </p>
+                     <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                        {((new Date(stage.completedAt).getTime() - new Date(stage.startedAt || 0).getTime()) / 1000).toFixed(1)}s
+                     </div>
                   )}
                 </div>
               </button>
@@ -179,3 +145,4 @@ export default function Timeline({
     </div>
   );
 }
+

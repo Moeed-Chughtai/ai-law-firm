@@ -6,7 +6,8 @@ import { Matter, StageId, StageInfo } from '@/lib/types';
 import Timeline from '@/components/matter/Timeline';
 import StageDetail from '@/components/matter/StageDetail';
 import TrustPanel from '@/components/matter/TrustPanel';
-import { Scale, Shield, Loader2 } from 'lucide-react';
+import { Scale, Shield, Loader2, ArrowLeft, MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
 
 export default function MatterPage() {
   const params = useParams();
@@ -84,78 +85,61 @@ export default function MatterPage() {
   const activeStage = matter.stages.find((s) => s.id === activeStageId) || matter.stages[0];
 
   return (
-    <div className="min-h-screen bg-surface-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="border-b border-surface-200 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-md shadow-brand-600/20">
-              <Scale className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-gray-900 tracking-tight">LexForge</h1>
-              <p className="text-[10px] text-gray-400 font-medium tracking-wide uppercase">
-                AI-Native Startup Law Firm
-              </p>
+      <nav className="border-b border-slate-200 bg-white sticky top-0 z-50 h-16 flex-none">
+        <div className="max-w-screen-2xl mx-auto px-6 h-full flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center group-hover:bg-slate-800 transition-colors">
+                <Scale className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-serif font-semibold text-lg text-slate-900">LexForge</span>
+            </Link>
+            <div className="h-6 w-px bg-slate-200" />
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-mono text-slate-500 text-xs">MATTER-{matter.id.slice(0, 6)}</span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200 capitalize">
+                {matter.docType.replace('_', ' ')}
+              </span>
             </div>
           </div>
-
+          
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="font-mono text-gray-400">Matter</span>
-              <span className="font-mono font-semibold text-gray-700 bg-surface-100 px-2 py-0.5 rounded">
-                #{matter.id}
-              </span>
+             <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+              <div className={`w-2 h-2 rounded-full ${matter.status === 'processing' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
+              <span className="uppercase tracking-wide font-medium">{matter.status}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                  matter.status === 'processing'
-                    ? 'bg-brand-50 text-brand-700'
-                    : matter.status === 'complete'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-red-50 text-red-700'
-                }`}
-              >
-                {matter.status === 'processing' && (
-                  <div className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse" />
-                )}
-                {matter.status === 'processing'
-                  ? 'Processing'
-                  : matter.status === 'complete'
-                    ? 'Complete'
-                    : 'Error'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-gray-400">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Confidential</span>
-            </div>
+             <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Main Content — 3 Column Layout */}
-      <div className="flex-1 max-w-[1600px] mx-auto w-full grid grid-cols-[280px_1fr_320px] gap-0 min-h-0">
-        {/* LEFT — Timeline */}
-        <div className="border-r border-surface-200 bg-white/40 overflow-y-auto">
-          <Timeline
-            stages={matter.stages}
-            currentStage={matter.currentStage}
-            selectedStage={activeStageId}
-            onSelectStage={handleStageSelect}
-          />
-        </div>
+      <div className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-6 grid grid-cols-12 gap-8 h-[calc(100vh-64px)] overflow-hidden">
+        {/* Sidebar */}
+        <aside className="hidden lg:block col-span-3 h-full overflow-y-auto pr-2">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 h-full overflow-hidden flex flex-col">
+            <Timeline
+              stages={matter.stages}
+              currentStage={matter.currentStage}
+              selectedStage={activeStageId}
+              onSelectStage={handleStageSelect}
+            />
+            <div className="mt-auto border-t border-slate-100 p-4 bg-slate-50">
+              <TrustPanel matter={matter} />
+            </div>
+          </div>
+        </aside>
 
-        {/* CENTER — Stage Detail */}
-        <div className="overflow-y-auto bg-surface-50">
-          <StageDetail matter={matter} activeStage={activeStage} />
-        </div>
-
-        {/* RIGHT — Trust Panel */}
-        <div className="border-l border-surface-200 bg-white/40 overflow-y-auto">
-          <TrustPanel matter={matter} />
-        </div>
+        {/* Main Content */}
+        <main className="col-span-12 lg:col-span-9 h-full overflow-y-auto pb-20">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-full p-8 md:p-10 relative">
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200" />
+             <StageDetail matter={matter} activeStage={activeStage} />
+          </div>
+        </main>
       </div>
     </div>
   );
