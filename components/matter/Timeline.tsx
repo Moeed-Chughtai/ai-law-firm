@@ -165,7 +165,9 @@ export default function Timeline({
                   {stage.completedAt && (
                     <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
                       <Clock className="w-2.5 h-2.5" />
-                      {new Date(stage.completedAt).toLocaleTimeString()}
+                      {stage.startedAt
+                        ? `${((new Date(stage.completedAt).getTime() - new Date(stage.startedAt).getTime()) / 1000).toFixed(1)}s`
+                        : new Date(stage.completedAt).toLocaleTimeString()}
                     </p>
                   )}
                 </div>

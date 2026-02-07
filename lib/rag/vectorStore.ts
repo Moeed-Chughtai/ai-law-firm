@@ -97,13 +97,13 @@ export async function semanticSearch(
   let paramIndex = 3;
 
   if (docType) {
-    metadataFilters.push(`metadata->>'docType' = $${paramIndex}`);
+    metadataFilters.push(`dc.metadata->>'docType' = $${paramIndex}`);
     params.push(docType);
     paramIndex++;
   }
 
   if (section) {
-    metadataFilters.push(`metadata->>'section' = $${paramIndex}`);
+    metadataFilters.push(`dc.metadata->>'section' = $${paramIndex}`);
     params.push(section);
     paramIndex++;
   }

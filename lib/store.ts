@@ -73,7 +73,7 @@ export async function setMatter(matter: Matter): Promise<void> {
       matter.guardrails ? JSON.stringify(matter.guardrails) : null,
       JSON.stringify(matter.deliverables),
       JSON.stringify(matter.auditLog),
-      matter.adversarialCritiques,
+      JSON.stringify(matter.adversarialCritiques || []),
       matter.draftRevised,
     ]
   );
@@ -92,13 +92,29 @@ export async function updateMatter(
 }
 
 export async function getAllMatters(): Promise<Matter[]> {
-  const result = await pool.query(`SELECT id FROM matters ORDER BY created_at DESC`);
-  const matters: Matter[] = [];
+  const result = await pool.query(
+    `SELECT * FROM matters ORDER BY created_at DESC`
+  );
   
-  for (const row of result.rows) {
-    const matter = await getMatter(row.id);
-    if (matter) matters.push(matter);
-  }
-  
-  return matters;
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    docType: row.doc_type,
+    jurisdiction: row.jurisdiction,
+    riskTolerance: row.risk_tolerance,
+    audience: row.audience,
+    documentText: row.document_text,
+    fileName: row.file_name,
+    status: row.status,
+    currentStage: row.current_stage,
+    overallConfidence: row.overall_confidence || 0,
+    stages: row.stages || [],
+    parsedSections: row.parsed_sections || [],
+    issues: row.issues || [],
+    guardrails: row.guardrails,
+    deliverables: row.deliverables || [],
+    auditLog: row.audit_log || [],
+    adversarialCritiques: row.adversarial_critiques || [],
+    draftRevised: row.draft_revised || false,
+  }));
 }

@@ -90,6 +90,14 @@ export default function IssueAnalysisStage({ matter, stage }: Props) {
                   {issue.explanation}
                 </p>
               </div>
+              {issue.confidence !== undefined && issue.confidence > 0 && (
+                <div className="flex-shrink-0 text-right">
+                  <div className="text-lg font-bold text-gray-900">
+                    {Math.round(issue.confidence * 100)}%
+                  </div>
+                  <div className="text-[10px] text-gray-400">confidence</div>
+                </div>
+              )}
             </div>
           </div>
         ))}

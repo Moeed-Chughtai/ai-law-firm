@@ -1,6 +1,5 @@
 import { Matter, StageId, StageInfo } from '../types';
 import { getMatter, setMatter } from '../store';
-import { sleep } from '../utils';
 import { runIntake } from './stages/intake';
 import { runParsing } from './stages/parsing';
 import { runIssueAnalysis } from './stages/issueAnalysis';
@@ -53,11 +52,18 @@ function addAuditEntry(matter: Matter, stage: StageId, action: string, detail: s
 }
 
 export async function runPipeline(matterId: string): Promise<void> {
+  console.log(`🚀 Pipeline started for matter ${matterId}`);
+  const pipelineStart = Date.now();
+
   for (const stageId of STAGE_ORDER) {
     let matter = await getMatter(matterId);
-    if (!matter) return;
+    if (!matter) {
+      console.error(`Matter ${matterId} not found, aborting pipeline`);
+      return;
+    }
 
     // Mark stage as running
+    const stageStart = Date.now();
     matter = updateStage(matter, stageId, {
       status: 'running',
       startedAt: new Date().toISOString(),
@@ -66,57 +72,119 @@ export async function runPipeline(matterId: string): Promise<void> {
     matter = addAuditEntry(matter, stageId, 'started', `Stage ${stageId} started`);
     await setMatter(matter);
 
-    // Small delay to make the UI feel realistic
-    await sleep(300);
-
     try {
       const runner = STAGE_RUNNERS[stageId];
       const updates = await runner(matter);
 
-      // Re-fetch matter in case it was updated during stage execution
+      // Re-fetch in case it was updated during execution
       matter = await getMatter(matterId);
       if (!matter) return;
-      
+
       // Apply updates
       matter = { ...matter, ...updates };
-      
-      // Mark stage complete
-      const stageStatus = stageId === 'guardrails' && matter.guardrails?.escalationRequired
-        ? 'warning' as const
-        : 'complete' as const;
-      
+
+      // Mark stage complete — preserve stage-specific data if the stage set it
+      const stageStatus =
+        stageId === 'guardrails' && matter.guardrails?.escalationRequired
+          ? ('warning' as const)
+          : ('complete' as const);
+
+      const stageDuration = Date.now() - stageStart;
+
+      // Check if the stage already set its own data (via its returned stages array)
+      const existingStageData = matter.stages.find((s) => s.id === stageId)?.data;
+
+      // Build stage summary data for stages that don't set their own data
+      let finalStageData = existingStageData;
+      if (!finalStageData) {
+        // Create meaningful data summaries for each stage type
+        switch (stageId) {
+          case 'parsing':
+            finalStageData = {
+              sectionCount: matter.parsedSections?.length || 0,
+              totalClauses: matter.parsedSections?.reduce((sum, s) => sum + (s.clauseCount || 0), 0) || 0,
+              sections: matter.parsedSections,
+            };
+            break;
+          case 'issue_analysis':
+            finalStageData = {
+              issuesFound: matter.issues?.length || 0,
+              issues: matter.issues,
+            };
+            break;
+          case 'research':
+            finalStageData = {
+              issuesResearched: matter.issues?.filter((i) => i.research).length || 0,
+              totalIssues: matter.issues?.length || 0,
+            };
+            break;
+          case 'synthesis':
+            finalStageData = {
+              issuesSynthesized: matter.issues?.filter((i) => i.synthesis).length || 0,
+              totalIssues: matter.issues?.length || 0,
+            };
+            break;
+          case 'drafting':
+            finalStageData = {
+              redlinesGenerated: matter.issues?.filter((i) => i.redline).length || 0,
+              totalIssues: matter.issues?.length || 0,
+            };
+            break;
+          case 'adversarial_review':
+            finalStageData = {
+              critiques: matter.adversarialCritiques?.length || 0,
+              draftRevised: matter.draftRevised,
+            };
+            break;
+          default:
+            finalStageData = { completed: true };
+        }
+      }
+
       matter = updateStage(matter, stageId, {
         status: stageStatus,
         completedAt: new Date().toISOString(),
-        data: updates,
-      });
-      matter = addAuditEntry(matter, stageId, 'completed', `Stage ${stageId} completed`);
-      await setMatter(matter);
-    } catch (error) {
-      matter = await getMatter(matterId);
-      if (!matter) return;
-      
-      matter = updateStage(matter, stageId, {
-        status: 'blocked',
-        completedAt: new Date().toISOString(),
+        data: finalStageData,
       });
       matter = addAuditEntry(
         matter,
         stageId,
-        'error',
-        `Stage ${stageId} failed: ${error instanceof Error ? error.message : String(error)}`
+        'completed',
+        `Stage ${stageId} completed in ${(stageDuration / 1000).toFixed(1)}s`
       );
+      await setMatter(matter);
+      console.log(`✅ Stage ${stageId} completed in ${(stageDuration / 1000).toFixed(1)}s`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Stage ${stageId} failed:`, errorMsg);
+
+      matter = await getMatter(matterId);
+      if (!matter) return;
+
+      matter = updateStage(matter, stageId, {
+        status: 'blocked',
+        completedAt: new Date().toISOString(),
+      });
+      matter = addAuditEntry(matter, stageId, 'error', `Stage ${stageId} failed: ${errorMsg}`);
       matter.status = 'error';
       await setMatter(matter);
       return;
     }
   }
 
-  // Mark pipeline as complete
+  // Mark pipeline complete
   const matter = await getMatter(matterId);
   if (matter) {
     matter.currentStage = null;
     matter.status = 'complete';
+    const totalTime = ((Date.now() - pipelineStart) / 1000).toFixed(1);
+    matter.auditLog.push({
+      timestamp: new Date().toISOString(),
+      stage: 'deliverables',
+      action: 'pipeline_complete',
+      detail: `Full pipeline completed in ${totalTime}s`,
+    });
     await setMatter(matter);
+    console.log(`🏁 Pipeline complete for matter ${matterId} in ${totalTime}s`);
   }
 }

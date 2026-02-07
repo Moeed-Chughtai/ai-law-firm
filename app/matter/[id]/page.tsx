@@ -44,9 +44,14 @@ export default function MatterPage() {
 
   useEffect(() => {
     fetchMatter();
-    const interval = setInterval(fetchMatter, 1500);
+    const interval = setInterval(() => {
+      // Only poll if not complete/error - saves network requests
+      if (!matter || matter.status === 'processing') {
+        fetchMatter();
+      }
+    }, 1200);
     return () => clearInterval(interval);
-  }, [fetchMatter]);
+  }, [fetchMatter, matter?.status]);
 
   if (error) {
     return (

@@ -83,6 +83,40 @@ export default function IntakeStage({ matter, stage }: Props) {
         </div>
       </div>
 
+      {/* Document Complexity Assessment */}
+      {(data.documentComplexity || data.estimatedIssues) && (
+        <div className="glass-card-strong p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-brand-500" />
+            <h3 className="text-base font-semibold text-gray-900">Pre-Analysis Assessment</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {data.documentComplexity && (
+              <div className="p-4 rounded-xl bg-surface-50 border border-surface-200">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Complexity
+                </div>
+                <p className={`text-sm font-bold capitalize ${
+                  data.documentComplexity === 'high' ? 'text-red-600' :
+                  data.documentComplexity === 'medium' ? 'text-amber-600' :
+                  'text-emerald-600'
+                }`}>
+                  {data.documentComplexity}
+                </p>
+              </div>
+            )}
+            {data.estimatedIssues && (
+              <div className="p-4 rounded-xl bg-surface-50 border border-surface-200">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Estimated Issues
+                </div>
+                <p className="text-sm font-bold text-gray-900">{data.estimatedIssues}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Scope */}
       <div className="glass-card-strong p-6">
         <div className="flex items-center gap-2 mb-4">

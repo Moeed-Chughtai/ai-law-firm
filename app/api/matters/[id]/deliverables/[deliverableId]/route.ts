@@ -5,7 +5,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string; deliverableId: string } }
 ) {
-  const matter = getMatter(params.id);
+  const matter = await getMatter(params.id);
 
   if (!matter) {
     return NextResponse.json({ error: 'Matter not found' }, { status: 404 });

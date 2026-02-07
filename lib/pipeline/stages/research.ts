@@ -4,8 +4,8 @@ import { callLLMJSON } from '../../ai/openai';
 import {
   retrieveResearchContext,
   formatChunksForPrompt,
-  storeCitation,
 } from '../../rag/retrieval';
+import { storeCitation } from '../../rag/vectorStore';
 
 interface ResearchData {
   marketNorms: string;
@@ -17,105 +17,148 @@ interface ResearchResult {
   research: ResearchData;
 }
 
-export async function runResearch(matter: Matter): Promise<Partial<Matter>> {
-  const issues = [...matter.issues];
-  const researchedIssues: Issue[] = [];
+async function researchSingleIssue(
+  issue: Issue,
+  matter: Matter
+): Promise<Issue> {
+  const isSafe = matter.docType === 'safe';
+  const docName = isSafe ? 'SAFE' : 'Term Sheet';
 
-  // Simulate parallel agent research
-  for (const issue of issues) {
-    const systemPrompt = `You are a legal research specialist. You analyze startup financing issues from three perspectives: market norms, risk impact, and negotiation leverage. Use the provided legal references and market data to ensure accuracy.`;
+  const systemPrompt = `You are a team of three elite legal research specialists working in parallel on a ${docName} review. Each specialist has deep expertise in their domain:
 
-    // Retrieve context for each research type
-    const [marketContext, riskContext, leverageContext] = await Promise.all([
-      retrieveResearchContext(issue.title, 'marketNorms', matter),
-      retrieveResearchContext(issue.title, 'riskImpact', matter),
-      retrieveResearchContext(issue.title, 'negotiationLeverage', matter),
+**Market Norms Specialist**: Expert in YC SAFE standards, NVCA model documents, Carta data, and PitchBook deal benchmarks. You know exact percentiles for every term.
+
+**Risk Impact Specialist**: Expert in dilution modeling, cap table mechanics, liquidation waterfalls, and scenario analysis. You quantify economic impact precisely.
+
+**Negotiation Strategy Specialist**: Expert in deal negotiation dynamics, counter-proposal frameworks, and founder leverage points. You've coached hundreds of founders through term negotiations.
+
+Each specialist provides authoritative, data-driven analysis with specific numbers, percentages, and benchmarks. Never be vague.`;
+
+  // Retrieve context for all three research types in parallel
+  let marketContext: any[] = [];
+  let riskContext: any[] = [];
+  let leverageContext: any[] = [];
+
+  try {
+    [marketContext, riskContext, leverageContext] = await Promise.all([
+      retrieveResearchContext(issue.title, 'marketNorms', matter).catch(() => []),
+      retrieveResearchContext(issue.title, 'riskImpact', matter).catch(() => []),
+      retrieveResearchContext(issue.title, 'negotiationLeverage', matter).catch(() => []),
     ]);
+  } catch {
+    // Continue without RAG context
+  }
 
-    const userPrompt = `Research this legal issue in the context of a ${matter.docType === 'safe' ? 'SAFE' : 'Term Sheet'}:
+  const hasContext = marketContext.length > 0 || riskContext.length > 0 || leverageContext.length > 0;
 
-Issue: ${issue.title}
-Severity: ${issue.severity}
-Clause: ${issue.clauseRef}
-Explanation: ${issue.explanation}
+  const userPrompt = `Research this legal issue comprehensively from three specialist perspectives:
 
-Document Context:
-${matter.documentText.substring(0, 2000)}
+**Issue:** ${issue.title}
+**Severity:** ${issue.severity}
+**Clause Reference:** ${issue.clauseRef}
+**Explanation:** ${issue.explanation}
 
-Market Norms References:
+**Document Type:** ${docName}
+**Document Excerpt:** ${matter.documentText.substring(0, 1500)}
+
+${hasContext ? `**Market Data References:**
 ${formatChunksForPrompt(marketContext)}
 
-Risk Analysis References:
+**Risk Analysis References:**
 ${formatChunksForPrompt(riskContext)}
 
-Negotiation References:
-${formatChunksForPrompt(leverageContext)}
+**Negotiation References:**
+${formatChunksForPrompt(leverageContext)}` : ''}
 
-Provide research from three agent perspectives:
+Provide research from each specialist:
 
-1. Market Norms Agent: What are the current market standards for this clause? What do YC, NVCA, and industry benchmarks say? What percentile does this fall into? Cite specific references.
+1. **Market Norms Specialist**: What are the EXACT current market standards for this term? What percentile does this document's term fall into? Cite YC, NVCA, or deal data. Include specific numbers (e.g., "75th percentile of pre-seed SAFEs have caps of $12-15M").
 
-2. Risk Impact Agent: What are the concrete risks and potential outcomes? Quantify the impact where possible (dilution percentages, exit scenarios, etc.). Use precedent data when available.
+2. **Risk Impact Specialist**: Quantify the economic impact. Model specific scenarios (e.g., "In a $50M Series A, this term results in X% additional dilution vs. standard terms"). Include best/worst case analysis.
 
-3. Negotiation Leverage Agent: What leverage does the founder have? What are standard counter-proposals? What's the likelihood of negotiation success? Reference similar negotiations.
+3. **Negotiation Leverage Specialist**: What specific counter-proposal should the founder make? What's the likelihood of success? What's the BATNA? Provide exact language or terms to propose.
 
 Return JSON:
 {
   "research": {
-    "marketNorms": "Detailed market analysis with citations (3-4 sentences)",
-    "riskImpact": "Detailed risk assessment with quantification (3-4 sentences)",
-    "negotiationLeverage": "Detailed negotiation strategy with examples (3-4 sentences)"
+    "marketNorms": "Detailed market analysis with SPECIFIC data points, percentiles, and source references (4-6 sentences)",
+    "riskImpact": "Detailed risk assessment with QUANTIFIED scenarios and economic modeling (4-6 sentences)",
+    "negotiationLeverage": "Detailed negotiation strategy with SPECIFIC counter-proposals and success likelihood (4-6 sentences)"
   }
 }`;
 
-    try {
-      const result = await callLLMJSON<ResearchResult>(
-        systemPrompt,
-        userPrompt,
-        { temperature: 0.4, maxTokens: 1500 }
-      );
+  const result = await callLLMJSON<ResearchResult>(
+    systemPrompt,
+    userPrompt,
+    { temperature: 0.3, maxTokens: 2000 }
+  );
 
-      researchedIssues.push({
-        ...issue,
-        research: result.research,
-      });
-
-      // Store citations
-      for (const chunk of [...marketContext, ...riskContext, ...leverageContext]) {
-        await storeCitation(
+  // Store citations in background (don't block)
+  const allChunks = [...marketContext, ...riskContext, ...leverageContext];
+  if (allChunks.length > 0) {
+    Promise.all(
+      allChunks.map((chunk) =>
+        storeCitation(
           matter.id,
           issue.id,
           chunk.id,
           chunk.relevanceScore,
           `Used in ${issue.title} research`
-        );
-      }
+        ).catch(() => {})
+      )
+    ).catch(() => {});
+  }
 
-      // Update incrementally
-      const current = await getMatter(matter.id);
-      if (current) {
-        current.issues = researchedIssues.concat(
-          issues.slice(researchedIssues.length)
-        );
-        current.stages = current.stages.map((s) =>
-          s.id === 'research'
-            ? {
-                ...s,
-                data: {
-                  completedAgents: researchedIssues.length * 3,
-                  totalAgents: issues.length * 3,
-                  parallelRuns: 3,
-                  issues: current.issues,
-                },
-              }
-            : s
-        );
-        await setMatter(current);
-      }
-    } catch (error) {
-      console.error(`Research failed for issue ${issue.id}:`, error);
-      // Fallback to issue without research
-      researchedIssues.push(issue);
+  return {
+    ...issue,
+    research: result.research,
+  };
+}
+
+export async function runResearch(matter: Matter): Promise<Partial<Matter>> {
+  const issues = [...matter.issues];
+
+  // Process issues in parallel batches of 3 for speed
+  const BATCH_SIZE = 3;
+  const researchedIssues: Issue[] = [];
+
+  for (let batchStart = 0; batchStart < issues.length; batchStart += BATCH_SIZE) {
+    const batch = issues.slice(batchStart, batchStart + BATCH_SIZE);
+
+    const batchResults = await Promise.all(
+      batch.map((issue) =>
+        researchSingleIssue(issue, matter).catch((error) => {
+          console.error(`Research failed for issue ${issue.id}:`, error);
+          return issue; // Return unresearched issue on failure
+        })
+      )
+    );
+
+    researchedIssues.push(...batchResults);
+
+    // Update incrementally after each batch
+    const current = await getMatter(matter.id);
+    if (current) {
+      // Merge researched issues with remaining unrearched ones
+      const updatedIssues = [
+        ...researchedIssues,
+        ...issues.slice(researchedIssues.length),
+      ];
+      current.issues = updatedIssues;
+      current.stages = current.stages.map((s) =>
+        s.id === 'research'
+          ? {
+              ...s,
+              data: {
+                completedAgents: researchedIssues.filter((i) => i.research).length * 3,
+                totalAgents: issues.length * 3,
+                parallelRuns: Math.min(BATCH_SIZE, batch.length),
+                issues: updatedIssues,
+              },
+            }
+          : s
+      );
+      await setMatter(current);
     }
   }
 

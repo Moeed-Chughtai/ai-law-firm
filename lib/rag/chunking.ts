@@ -30,7 +30,7 @@ export function chunkLegalDocument(
   // Strategy 1: Split by major sections (## headings)
   const sectionRegex = /^##\s+(.+)$/gm;
   const sections: Array<{ title: string; start: number; end: number }> = [];
-  let match;
+  let match: RegExpExecArray | null;
 
   while ((match = sectionRegex.exec(content)) !== null) {
     const start = match.index;
@@ -64,7 +64,7 @@ export function chunkLegalDocument(
   });
 
   // Strategy 2: Split by clauses within sections (numbered lists, bullet points)
-  const clauseRegex = /(?:^|\n)(?:\d+\.|\-|\*)\s+(.+?)(?=\n(?:##|\d+\.|\-|\*)|$)/gs;
+  const clauseRegex = /(?:^|\n)(?:\d+\.|\-|\*)\s+(.+?)(?=\n(?:##|\d+\.|\-|\*)|$)/gm;
   let clauseIndex = chunks.length;
 
   while ((match = clauseRegex.exec(content)) !== null) {
@@ -72,7 +72,7 @@ export function chunkLegalDocument(
     if (clauseText.length > 50 && clauseText.length < 2000) {
       // Find which section this clause belongs to
       const section = sections.find(
-        (s) => match.index! >= s.start && match.index! < s.end
+        (s) => match!.index! >= s.start && match!.index! < s.end
       );
 
       chunks.push({
