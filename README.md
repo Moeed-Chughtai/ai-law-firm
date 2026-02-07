@@ -327,8 +327,8 @@ Columns: `id`, `matter_id`, `issue_id`, `document_id`, `relevance_score`, `creat
 brew install pgvector
 
 # 2. Create database
-createdb lexforge
-psql lexforge -c "CREATE EXTENSION vector;"
+createdb legalswarm
+psql legalswarm -c "CREATE EXTENSION vector;"
 
 # 3. Install dependencies
 npm install
@@ -336,7 +336,7 @@ npm install
 # 4. Configure environment
 cat > .env.local << EOF
 OPENAI_API_KEY=sk-proj-...
-DATABASE_URL=postgresql://$(whoami)@localhost:5432/lexforge
+DATABASE_URL=postgresql://$(whoami)@localhost:5432/legalswarm
 EOF
 
 # 5. Initialize database

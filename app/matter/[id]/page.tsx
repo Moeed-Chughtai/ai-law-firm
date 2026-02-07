@@ -94,7 +94,7 @@ export default function MatterPage() {
               <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center group-hover:bg-gray-800 transition-colors">
                 <Scale className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-semibold text-base text-gray-900">LexForge</span>
+              <span className="font-semibold text-base text-gray-900">LegalSwarm</span>
             </Link>
             <div className="h-5 w-px bg-gray-200" />
             <div className="flex items-center gap-2.5">

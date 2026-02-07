@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'LexForge — AI-Native Legal Review',
+  title: 'LegalSwarm — AI-Native Legal Review',
   description: 'Automated legal review for startup financing documents. Upload your SAFE or Term Sheet for comprehensive analysis.',
 };
 

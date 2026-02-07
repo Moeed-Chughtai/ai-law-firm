@@ -170,7 +170,7 @@ export default function IntakePage() {
             <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center">
               <Scale className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-base text-gray-900">LexForge</span>
+              <span className="font-semibold text-base text-gray-900">LegalSwarm</span>
           </div>
           <div className="flex items-center gap-4">
             <button
@@ -515,7 +515,7 @@ export default function IntakePage() {
               <div className="flex items-start gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-100">
                 <AlertCircle className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  LexForge provides information, not legal advice. Documents are processed
+                  LegalSwarm provides information, not legal advice. Documents are processed
                   securely and deleted after analysis completes.
                 </p>
               </div>
