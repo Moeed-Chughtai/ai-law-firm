@@ -337,6 +337,7 @@ npm install
 cat > .env.local << EOF
 OPENAI_API_KEY=sk-proj-...
 DATABASE_URL=postgresql://$(whoami)@localhost:5432/legalswarm
+ELEVENLABS_API_KEY=your-elevenlabs-api-key
 EOF
 
 # 5. Initialize database

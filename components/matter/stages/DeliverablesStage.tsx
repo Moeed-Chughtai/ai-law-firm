@@ -11,6 +11,7 @@ import {
   Shield,
   Scale,
 } from 'lucide-react';
+import Hearing from '@/components/matter/Hearing';
 
 interface Props {
   matter: Matter;
@@ -65,6 +66,9 @@ export default function DeliverablesStage({ matter, stage }: Props) {
           </p>
         </div>
       </div>
+
+      {/* The Hearing — voice debate */}
+      <Hearing matter={matter} />
 
       {/* Escalation warning */}
       {matter.guardrails?.escalationRequired && (
