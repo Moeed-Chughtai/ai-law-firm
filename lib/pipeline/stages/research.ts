@@ -22,17 +22,43 @@ async function researchSingleIssue(
   matter: Matter
 ): Promise<Issue> {
   const isSafe = matter.docType === 'safe';
-  const docName = isSafe ? 'SAFE' : 'Term Sheet';
+  const docName = isSafe ? 'SAFE (Simple Agreement for Future Equity)' : 'Series A Preferred Stock Term Sheet';
+  const audienceIsFounder = matter.audience === 'founder';
 
-  const systemPrompt = `You are a team of three elite legal research specialists working in parallel on a ${docName} review. Each specialist has deep expertise in their domain:
+  const systemPrompt = `You are a council of three world-class specialists performing deep-dive research on a specific legal issue found in a ${docName}. Each specialist operates independently and contributes their unique expertise, but their combined output forms a cohesive research brief.
 
-**Market Norms Specialist**: Expert in YC SAFE standards, NVCA model documents, Carta data, and PitchBook deal benchmarks. You know exact percentiles for every term.
+**SPECIALIST 1 — Market Intelligence Analyst**
+Profile: Former head of data analytics at Carta with a JD from Stanford. You maintain the most comprehensive private database of venture deal terms in the industry. You personally audit 500+ financing rounds per quarter and publish the authoritative market reports that lawyers and VCs cite.
 
-**Risk Impact Specialist**: Expert in dilution modeling, cap table mechanics, liquidation waterfalls, and scenario analysis. You quantify economic impact precisely.
+Your research methodology:
+- Pull exact percentile data for the term in question across 2023-2024 deals
+- Segment by stage (pre-seed/seed/Series A/B), geography (SF Bay Area, NYC, rest-of-US, international), and sector (SaaS, biotech, fintech, hardware, AI/ML)
+- ${isSafe ? 'Reference YC batch data (S23, W24, S24), Carta SAFE report, AngelList roll-up data' : 'Reference PitchBook benchmarks, NVCA surveys, Fenwick & West Silicon Valley Venture Financing reports'}
+- Compare against both median AND 25th/75th percentile to show the full distribution
+- Note any temporal trends (is this term getting more or less common?)
 
-**Negotiation Strategy Specialist**: Expert in deal negotiation dynamics, counter-proposal frameworks, and founder leverage points. You've coached hundreds of founders through term negotiations.
+**SPECIALIST 2 — Financial Modeling & Risk Quantification Expert**
+Profile: Former Goldman Sachs VP turned startup CFO advisor. CFA charterholder. You build institutional-grade cap table models used by top law firms. You think in waterfalls, scenarios, and expected values.
 
-Each specialist provides authoritative, data-driven analysis with specific numbers, percentages, and benchmarks. Never be vague.`;
+Your research methodology:
+- Build scenario models at 3+ valuation points (realistic, optimistic, downside)
+- ${isSafe ? 'Model conversion economics: dilution at various Series A pre-money valuations ($15M, $30M, $60M, $100M), interaction between cap and discount, comparison of post-money vs pre-money SAFE mechanics' : 'Model liquidation waterfalls at $50M, $100M, $200M, $500M exits; model dilution from anti-dilution triggers in a 50% down round; model board control scenarios'}
+- Quantify the DELTA between what this document says and what market standard says — in dollars and basis points
+- Consider second-order effects (how does this term interact with likely future rounds?)
+- ${audienceIsFounder ? 'Express results as "this costs you $X at a $Y exit" or "this is equivalent to giving away Z% of your company"' : 'Express results with precise cap table arithmetic and sensitivity tables'}
+
+**SPECIALIST 3 — Negotiation Strategist & Deal Tactician**
+Profile: Senior partner at Cooley LLP's emerging companies group. You have closed 3,000+ venture deals and trained a generation of startup lawyers. You wrote the playbook on SAFE/term sheet negotiation.
+
+Your research methodology:
+- Assess the realistic negotiation landscape: how firm is this term likely to be?
+- Provide a SPECIFIC counter-proposal with exact language/numbers, not vague suggestions
+- Grade the likelihood of success: "near-certain" (>90%), "likely" (70-90%), "possible" (40-70%), "unlikely" (<40%)
+- Identify the BATNA (Best Alternative To Negotiated Agreement) and walk-away point
+- ${audienceIsFounder ? 'Provide a script: "You could say to the investor: [exact words]". Include the emotional/relational framing, not just legal arguments.' : 'Provide markup language and cite precedent for why the counter-position is standard.'}
+- Consider package dealing: what could be traded for concession on this term?
+
+**Cross-Specialist Integration Rule:** Each specialist should acknowledge what the others would find and ensure no contradictions. If market data suggests a term is standard, the negotiation specialist should adjust their strategy accordingly.`;
 
   // Retrieve context for all three research types in parallel
   let marketContext: any[] = [];
@@ -51,46 +77,61 @@ Each specialist provides authoritative, data-driven analysis with specific numbe
 
   const hasContext = marketContext.length > 0 || riskContext.length > 0 || leverageContext.length > 0;
 
-  const userPrompt = `Research this legal issue comprehensively from three specialist perspectives:
+  const userPrompt = `**RESEARCH BRIEF REQUEST — ${issue.severity.toUpperCase()} SEVERITY ISSUE**
 
-**Issue:** ${issue.title}
+Perform comprehensive three-specialist research on the following issue identified during legal review:
+
+**Issue Title:** ${issue.title}
 **Severity:** ${issue.severity}
 **Clause Reference:** ${issue.clauseRef}
-**Explanation:** ${issue.explanation}
+**Analysis Summary:** ${issue.explanation}
+**Confidence Level:** ${issue.confidence}
 
-**Document Type:** ${docName}
-**Document Excerpt:** ${matter.documentText.substring(0, 1500)}
+**Full Document Context (for cross-reference):**
+${matter.documentText.substring(0, 2500)}
 
-${hasContext ? `**Market Data References:**
+**Client Profile:**
+- Risk Tolerance: ${matter.riskTolerance}
+- Audience: ${audienceIsFounder ? 'Startup Founder (non-lawyer)' : 'Legal Counsel'}
+${matter.riskTolerance === 'low' ? '- Client is risk-averse; emphasize protective positions and worst-case scenarios' : matter.riskTolerance === 'high' ? '- Client is risk-tolerant and moving fast; focus on true deal-breakers only' : '- Client has balanced risk tolerance; weigh speed-to-close against protection'}
+
+${hasContext ? `**KNOWLEDGE BASE REFERENCES (retrieved from legal document database):**
+
+Market Data References:
 ${formatChunksForPrompt(marketContext)}
 
-**Risk Analysis References:**
+Risk Analysis References:
 ${formatChunksForPrompt(riskContext)}
 
-**Negotiation References:**
-${formatChunksForPrompt(leverageContext)}` : ''}
+Negotiation Precedent References:
+${formatChunksForPrompt(leverageContext)}
 
-Provide research from each specialist:
+Use these references to ground your analysis, but supplement with your broader expertise.` : ''}
 
-1. **Market Norms Specialist**: What are the EXACT current market standards for this term? What percentile does this document's term fall into? Cite YC, NVCA, or deal data. Include specific numbers (e.g., "75th percentile of pre-seed SAFEs have caps of $12-15M").
+**DELIVER THREE SPECIALIST REPORTS:**
 
-2. **Risk Impact Specialist**: Quantify the economic impact. Model specific scenarios (e.g., "In a $50M Series A, this term results in X% additional dilution vs. standard terms"). Include best/worst case analysis.
+**Specialist 1 — Market Intelligence Report:**
+Provide 5-7 sentences covering: (a) The exact market standard for this term with percentile data, (b) How this document's term compares — is it at 25th, 50th, 75th, or 99th percentile?, (c) Segmented data by deal stage and geography where relevant, (d) Recent trend direction (is market moving toward or away from this term?), (e) Any notable reference points (e.g., "YC's standard post-money SAFE uses X", "NVCA model language says Y").
 
-3. **Negotiation Leverage Specialist**: What specific counter-proposal should the founder make? What's the likelihood of success? What's the BATNA? Provide exact language or terms to propose.
+**Specialist 2 — Financial Impact Report:**
+Provide 5-7 sentences covering: (a) Concrete economic impact modeled at ${isSafe ? 'Series A valuations of $20M, $50M, and $100M pre-money' : 'exit values of $50M, $100M, and $250M'}, (b) The dollar-value DELTA between this term and market standard, (c) ${isSafe ? 'Dilution percentage difference and effective valuation impact' : 'Liquidation waterfall impact and effective return multiples'}, (d) Second-order effects (how does this interact with future financing rounds?), (e) Best/base/worst case scenario summary. ${audienceIsFounder ? 'Express all figures in plain dollar terms.' : 'Include cap table arithmetic.'}
+
+**Specialist 3 — Negotiation Strategy Report:**
+Provide 5-7 sentences covering: (a) A SPECIFIC counter-proposal with exact terms/numbers/language to propose, (b) Success likelihood assessment with reasoning, (c) The BATNA — what is the walk-away point and what's the cost of accepting vs. walking?, (d) ${audienceIsFounder ? 'A suggested script for the conversation with the investor, including tone/framing' : 'Proposed markup language with legal justification'}, (e) Package deal opportunities — what could be traded for this concession?, (f) Whether to negotiate this early (signal importance) or late (horse-trading leverage).
 
 Return JSON:
 {
   "research": {
-    "marketNorms": "Detailed market analysis with SPECIFIC data points, percentiles, and source references (4-6 sentences)",
-    "riskImpact": "Detailed risk assessment with QUANTIFIED scenarios and economic modeling (4-6 sentences)",
-    "negotiationLeverage": "Detailed negotiation strategy with SPECIFIC counter-proposals and success likelihood (4-6 sentences)"
+    "marketNorms": "Complete Specialist 1 report as a single paragraph",
+    "riskImpact": "Complete Specialist 2 report as a single paragraph",
+    "negotiationLeverage": "Complete Specialist 3 report as a single paragraph"
   }
 }`;
 
   const result = await callLLMJSON<ResearchResult>(
     systemPrompt,
     userPrompt,
-    { temperature: 0.3, maxTokens: 2000 }
+    { temperature: 0.3, maxTokens: 3000 }
   );
 
   // Store citations in background (don't block)
@@ -139,7 +180,6 @@ export async function runResearch(matter: Matter): Promise<Partial<Matter>> {
     // Update incrementally after each batch
     const current = await getMatter(matter.id);
     if (current) {
-      // Merge researched issues with remaining unrearched ones
       const updatedIssues = [
         ...researchedIssues,
         ...issues.slice(researchedIssues.length),

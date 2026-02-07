@@ -10,7 +10,7 @@ import DraftingStage from './stages/DraftingStage';
 import AdversarialReviewStage from './stages/AdversarialReviewStage';
 import GuardrailsStage from './stages/GuardrailsStage';
 import DeliverablesStage from './stages/DeliverablesStage';
-import { Loader2, Clock, ArrowRight } from 'lucide-react';
+import { Loader2, Clock } from 'lucide-react';
 
 interface StageDetailProps {
   matter: Matter;
@@ -18,50 +18,43 @@ interface StageDetailProps {
 }
 
 const STAGE_DESCRIPTIONS: Record<StageId, string> = {
-  intake: 'Your document is scoped and validated for review. We verify jurisdiction, document type, and set the analysis parameters.',
-  parsing: 'The document is broken down into its constituent clauses and structural sections for systematic analysis.',
-  issue_analysis: 'Each clause is examined against legal best practices and market standards to identify risks, gaps, and areas of concern.',
-  research: 'Specialized research agents work in parallel — analyzing market norms, risk impacts, and negotiation leverage for each flagged issue.',
-  synthesis: 'Research findings are synthesized into actionable legal recommendations with confidence scores and detailed reasoning.',
-  drafting: 'Specific redline language is drafted for each issue, providing exact suggested changes to strengthen your position.',
-  adversarial_review: 'An independent review agent challenges our analysis, testing assumptions and strengthening recommendations before delivery.',
-  guardrails: 'Final safety checks verify jurisdiction compliance, citation completeness, and confidence thresholds before release.',
-  deliverables: 'All analysis artifacts are packaged into downloadable deliverables — your complete legal review.',
+  intake: 'Document scoped and validated. Jurisdiction, document type, and analysis parameters confirmed.',
+  parsing: 'Extracting clauses, structural sections, and key provisions from the document.',
+  issue_analysis: 'Each clause evaluated against legal best practices and market standards.',
+  research: 'Parallel research agents analyze market norms, risk impacts, and negotiation leverage.',
+  synthesis: 'Research findings synthesized into actionable recommendations with confidence scores.',
+  drafting: 'Specific redline language drafted for each issue with suggested contract changes.',
+  adversarial_review: 'Independent review agent challenges assumptions and stress-tests recommendations.',
+  guardrails: 'Final safety checks — jurisdiction compliance, citation verification, and confidence thresholds.',
+  deliverables: 'Analysis artifacts packaged into downloadable deliverables.',
 };
 
 export default function StageDetail({ matter, activeStage }: StageDetailProps) {
   const renderStageContent = () => {
     if (activeStage.status === 'pending') {
       return (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-6">
-            <div className="w-3 h-3 rounded-full bg-slate-300" />
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center mb-4">
+            <div className="w-2 h-2 rounded-full bg-gray-300" />
           </div>
-          <h3 className="text-base font-medium text-slate-400 font-serif">Awaiting Previous Stages</h3>
-          <p className="text-sm text-slate-400 mt-2 max-w-sm leading-relaxed">
-            This stage will begin automatically once the preceding stages have completed their analysis.
+          <h3 className="text-sm font-medium text-gray-400">Waiting for previous stages</h3>
+          <p className="text-xs text-gray-400 mt-1.5 max-w-xs">
+            This stage will begin automatically once upstream stages complete.
           </p>
-          <div className="flex items-center gap-2 mt-6 text-xs text-slate-400">
-            <ArrowRight className="w-3.5 h-3.5" />
-            <span>Pipeline is sequential — each stage builds on the last</span>
-          </div>
         </div>
       );
     }
 
     if (activeStage.status === 'running' && !activeStage.data) {
       return (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mb-6">
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
-            </div>
-            <div className="absolute inset-0 w-16 h-16 rounded-2xl bg-slate-900/20 animate-ping" />
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center mb-4">
+            <Loader2 className="w-5 h-5 text-brand-600 animate-spin" />
           </div>
-          <h3 className="text-base font-semibold text-slate-900 font-serif mt-2">
+          <h3 className="text-sm font-semibold text-gray-900">
             {activeStage.label}
           </h3>
-          <p className="text-sm text-slate-500 mt-2 max-w-sm leading-relaxed">
+          <p className="text-xs text-gray-500 mt-1.5 max-w-sm leading-relaxed">
             {STAGE_DESCRIPTIONS[activeStage.id]}
           </p>
         </div>
@@ -92,30 +85,35 @@ export default function StageDetail({ matter, activeStage }: StageDetailProps) {
     }
   };
 
-  const elapsed = activeStage.startedAt && activeStage.completedAt
-    ? ((new Date(activeStage.completedAt).getTime() - new Date(activeStage.startedAt).getTime()) / 1000).toFixed(1)
-    : null;
+  const elapsed =
+    activeStage.startedAt && activeStage.completedAt
+      ? (
+          (new Date(activeStage.completedAt).getTime() -
+            new Date(activeStage.startedAt).getTime()) /
+          1000
+        ).toFixed(1)
+      : null;
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
       {/* Stage Header */}
-      <div className="mb-10">
-        <div className="flex items-center gap-3 mb-3">
+      <div className="mb-8 pb-6 border-b border-gray-100">
+        <div className="flex items-center gap-2.5 mb-2">
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-widest ${
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${
               activeStage.status === 'running'
-                ? 'bg-slate-900 text-white'
+                ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200'
                 : activeStage.status === 'complete'
-                  ? 'bg-emerald-100 text-emerald-700'
+                  ? 'bg-success-50 text-success-700 ring-1 ring-inset ring-success-200'
                   : activeStage.status === 'warning'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-slate-100 text-slate-400'
+                    ? 'bg-warning-50 text-warning-700 ring-1 ring-inset ring-warning-200'
+                    : 'bg-gray-50 text-gray-400 ring-1 ring-inset ring-gray-200'
             }`}
           >
             {activeStage.status === 'running' ? (
               <>
-                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                In Progress
+                <div className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse" />
+                In progress
               </>
             ) : activeStage.status === 'complete' ? (
               'Complete'
@@ -126,16 +124,16 @@ export default function StageDetail({ matter, activeStage }: StageDetailProps) {
             )}
           </span>
           {elapsed && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-[11px] text-gray-400 flex items-center gap-1 font-mono">
               <Clock className="w-3 h-3" />
               {elapsed}s
             </span>
           )}
         </div>
-        <h2 className="text-3xl font-serif text-slate-900 tracking-tight">
+        <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
           {activeStage.label}
         </h2>
-        <p className="text-sm text-slate-500 mt-2 leading-relaxed max-w-2xl">
+        <p className="text-sm text-gray-500 mt-1 leading-relaxed max-w-2xl">
           {STAGE_DESCRIPTIONS[activeStage.id]}
         </p>
       </div>

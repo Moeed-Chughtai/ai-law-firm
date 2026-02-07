@@ -4,12 +4,9 @@ import { Matter, StageInfo } from '@/lib/types';
 import {
   CheckCircle2,
   MapPin,
-  Lock,
   FileText,
   Shield,
-  Target,
   Users,
-  AlertTriangle,
   Gauge,
   ArrowRight,
 } from 'lucide-react';
@@ -21,143 +18,134 @@ interface Props {
 
 export default function IntakeStage({ matter, stage }: Props) {
   const data = stage.data;
-
   if (!data) return null;
 
-  const complexityColor = data.documentComplexity === 'high' ? 'text-red-600 bg-red-50 border-red-200' :
-    data.documentComplexity === 'medium' ? 'text-amber-600 bg-amber-50 border-amber-200' :
-    'text-emerald-600 bg-emerald-50 border-emerald-200';
+  const complexityColor =
+    data.documentComplexity === 'high'
+      ? 'text-error-700 bg-error-50'
+      : data.documentComplexity === 'medium'
+        ? 'text-warning-700 bg-warning-50'
+        : 'text-success-700 bg-success-50';
 
   return (
     <div className="space-y-8 animate-slide-up">
-      {/* Acceptance Banner */}
-      <div className="flex items-center gap-4 p-5 bg-emerald-50 border border-emerald-200 rounded-xl">
-        <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
-          <CheckCircle2 className="w-6 h-6 text-white" />
-        </div>
+      {/* Acceptance banner */}
+      <div className="flex items-center gap-3 p-4 bg-success-50 border border-success-200 rounded-lg">
+        <CheckCircle2 className="w-5 h-5 text-success-600 shrink-0" />
         <div>
-          <h3 className="text-base font-semibold text-emerald-900">Matter Accepted for Review</h3>
-          <p className="text-sm text-emerald-700 mt-0.5">
-            Your document has been validated and scoped. The analysis pipeline is now configured.
+          <h3 className="text-sm font-semibold text-success-900">Matter accepted</h3>
+          <p className="text-xs text-success-700 mt-0.5">
+            Document validated and scoped. The analysis pipeline is now configured.
           </p>
         </div>
       </div>
 
-      {/* Matter Parameters — 2x2 Grid */}
+      {/* Matter parameters — structured table */}
       <div>
-        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Matter Parameters</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <FileText className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Document Type</span>
+        <h4 className="section-label mb-3">Matter parameters</h4>
+        <div className="card divide-y divide-gray-100">
+          {[
+            {
+              icon: FileText,
+              label: 'Document type',
+              value: data.detectedDocType,
+              desc:
+                data.detectedDocType === 'SAFE'
+                  ? 'Simple Agreement for Future Equity — YC standard'
+                  : 'Term Sheet — Series A preferred stock',
+            },
+            {
+              icon: MapPin,
+              label: 'Jurisdiction',
+              value: data.jurisdictionConfirmed,
+              desc: 'Delaware General Corporation Law (DGCL)',
+            },
+            {
+              icon: Shield,
+              label: 'Risk sensitivity',
+              value: data.riskProfile,
+              desc:
+                data.riskProfile === 'low'
+                  ? 'Conservative — all non-standard provisions flagged'
+                  : data.riskProfile === 'medium'
+                    ? 'Balanced — significant deviations flagged'
+                    : 'Aggressive — only critical issues flagged',
+            },
+            {
+              icon: Users,
+              label: 'Output mode',
+              value: data.audienceMode,
+              desc:
+                data.audienceMode === 'Founder' || data.audienceMode === 'founder'
+                  ? 'Plain-English with clear action items'
+                  : 'Technical analysis with statutory citations',
+            },
+          ].map((row) => (
+            <div key={row.label} className="flex items-start gap-4 px-5 py-4">
+              <row.icon className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-gray-500">{row.label}</div>
+                <div className="text-sm font-medium text-gray-900 capitalize mt-0.5">{row.value}</div>
+              </div>
+              <span className="text-xs text-gray-400 max-w-[200px] text-right hidden sm:block">{row.desc}</span>
             </div>
-            <p className="text-lg font-serif font-semibold text-slate-900">{data.detectedDocType}</p>
-            <p className="text-xs text-slate-500 mt-1">
-              {data.detectedDocType === 'SAFE' 
-                ? 'Simple Agreement for Future Equity — standard YC-format instrument'
-                : 'Venture Capital Term Sheet — Series A preferred stock financing'}
-            </p>
-          </div>
-
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jurisdiction</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-lg font-serif font-semibold text-slate-900">{data.jurisdictionConfirmed}</p>
-              <Lock className="w-4 h-4 text-slate-400" />
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Governed by Delaware General Corporation Law (DGCL)</p>
-          </div>
-
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Risk Sensitivity</span>
-            </div>
-            <p className="text-lg font-serif font-semibold text-slate-900 capitalize">{data.riskProfile}</p>
-            <p className="text-xs text-slate-500 mt-1">
-              {data.riskProfile === 'low' ? 'Conservative — all non-standard provisions flagged' :
-               data.riskProfile === 'medium' ? 'Balanced — significant deviations from market terms flagged' :
-               'Aggressive — only critical, deal-breaking issues flagged'}
-            </p>
-          </div>
-
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Output Mode</span>
-            </div>
-            <p className="text-lg font-serif font-semibold text-slate-900 capitalize">{data.audienceMode}</p>
-            <p className="text-xs text-slate-500 mt-1">
-              {data.audienceMode === 'Founder' || data.audienceMode === 'founder'
-                ? 'Plain-English explanations with clear action items'
-                : 'Technical legal analysis with statutory citations'}
-            </p>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Pre-Analysis Assessment */}
+      {/* Pre-analysis assessment */}
       {(data.documentComplexity || data.estimatedIssues) && (
         <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Pre-Analysis Assessment</h4>
-          <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="grid grid-cols-3 gap-6">
-              {data.documentComplexity && (
-                <div className="text-center">
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-semibold mb-2 ${complexityColor}`}>
-                    <Gauge className="w-4 h-4" />
-                    <span className="capitalize">{data.documentComplexity}</span>
-                  </div>
-                  <p className="text-xs text-slate-500">Document Complexity</p>
+          <h4 className="section-label mb-3">Pre-analysis assessment</h4>
+          <div className="grid grid-cols-3 gap-3">
+            {data.documentComplexity && (
+              <div className="metric-card text-center">
+                <div className={`inline-flex px-2 py-0.5 rounded-md text-xs font-semibold capitalize mb-1 ${complexityColor}`}>
+                  {data.documentComplexity}
                 </div>
-              )}
-              {data.estimatedIssues && (
-                <div className="text-center">
-                  <div className="text-2xl font-serif font-bold text-slate-900 mb-1">{data.estimatedIssues}</div>
-                  <p className="text-xs text-slate-500">Estimated Issues</p>
-                </div>
-              )}
-              <div className="text-center">
-                <div className="text-2xl font-serif font-bold text-slate-900 mb-1">9</div>
-                <p className="text-xs text-slate-500">Analysis Stages</p>
+                <div className="text-[11px] text-gray-500">Complexity</div>
               </div>
+            )}
+            {data.estimatedIssues && (
+              <div className="metric-card text-center">
+                <div className="text-xl font-semibold text-gray-900 tabular-nums">{data.estimatedIssues}</div>
+                <div className="text-[11px] text-gray-500">Est. issues</div>
+              </div>
+            )}
+            <div className="metric-card text-center">
+              <div className="text-xl font-semibold text-gray-900 tabular-nums">9</div>
+              <div className="text-[11px] text-gray-500">Pipeline stages</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Analysis Scope */}
+      {/* Analysis scope */}
       <div>
-        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Analysis Scope</h4>
-        <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
-          <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-            Based on the document type and jurisdiction, the following legal dimensions will be systematically analyzed:
+        <h4 className="section-label mb-3">Analysis scope</h4>
+        <div className="card p-5">
+          <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+            Based on document type and jurisdiction, the following dimensions will be analyzed:
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {data.allowedScope?.map((scope: string, i: number) => (
               <div
                 key={i}
-                className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-gray-50 border border-gray-100"
               >
-                <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
-                  <span className="text-[10px] font-bold text-white">{i + 1}</span>
-                </div>
-                <span className="text-sm text-slate-700 font-medium">{scope}</span>
+                <span className="text-[10px] font-mono text-gray-400">{String(i + 1).padStart(2, '0')}</span>
+                <span className="text-sm text-gray-700">{scope}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* What happens next */}
-      <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
-        <ArrowRight className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-        <p className="text-xs text-slate-500 leading-relaxed">
-          <span className="font-semibold text-slate-700">Next: Document Parsing</span> — Your document will be decomposed into its structural sections and individual clauses for systematic clause-by-clause analysis.
+      {/* Next step */}
+      <div className="flex items-start gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100">
+        <ArrowRight className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+        <p className="text-xs text-gray-500 leading-relaxed">
+          <span className="font-semibold text-gray-700">Next: Document Parsing</span> — Decomposing into structural sections and individual clauses for systematic analysis.
         </p>
       </div>
     </div>

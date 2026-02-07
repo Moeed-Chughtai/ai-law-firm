@@ -2,16 +2,13 @@
 
 import { Matter, StageInfo } from '@/lib/types';
 import {
-  Package,
   Download,
   FileText,
   FileJson,
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Eye,
   Shield,
-  Sparkles,
 } from 'lucide-react';
 
 interface Props {
@@ -25,14 +22,14 @@ const FORMAT_ICONS: Record<string, React.ElementType> = {
 };
 
 const FORMAT_COLORS: Record<string, string> = {
-  Markdown: 'bg-violet-100 text-violet-700 border-violet-200',
-  JSON: 'bg-amber-100 text-amber-700 border-amber-200',
+  Markdown: 'bg-brand-50 text-brand-700',
+  JSON: 'bg-warning-50 text-warning-700',
 };
 
 export default function DeliverablesStage({ matter, stage }: Props) {
   const deliverables = matter.deliverables || [];
 
-  const handleDownload = (deliverable: typeof deliverables[0]) => {
+  const handleDownload = (deliverable: (typeof deliverables)[0]) => {
     const extension = deliverable.format === 'JSON' ? 'json' : 'md';
     const mimeType = deliverable.format === 'JSON' ? 'application/json' : 'text/markdown';
     const blob = new Blob([deliverable.content], { type: mimeType });
@@ -48,102 +45,95 @@ export default function DeliverablesStage({ matter, stage }: Props) {
 
   return (
     <div className="space-y-8 animate-slide-up">
-      {/* Completion Banner */}
-      <div className="flex items-start gap-4 p-6 bg-emerald-50 border border-emerald-200 rounded-xl">
-        <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
-          <Sparkles className="w-6 h-6 text-white" />
-        </div>
+      {/* Completion banner */}
+      <div className="flex items-start gap-3 p-4 bg-success-50 border border-success-200 rounded-lg">
+        <CheckCircle2 className="w-5 h-5 text-success-600 mt-0.5 shrink-0" />
         <div>
-          <h3 className="text-lg font-serif font-semibold text-emerald-900">Analysis Complete</h3>
-          <p className="text-sm text-emerald-700 mt-1 leading-relaxed">
-            Your legal analysis has been completed through all {matter.stages.length} pipeline stages. 
-            {deliverables.length} deliverable documents are ready for download.
+          <h3 className="text-sm font-semibold text-success-900">Analysis complete</h3>
+          <p className="text-xs text-success-700 mt-1 leading-relaxed">
+            Completed all {matter.stages.length} pipeline stages.{' '}
+            {deliverables.length} deliverable documents ready for download.
           </p>
         </div>
       </div>
 
-      {/* Guardrail watermark if escalation needed */}
+      {/* Escalation warning */}
       {matter.guardrails?.escalationRequired && (
-        <div className="p-5 rounded-xl bg-amber-50 border-2 border-amber-300">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <h4 className="text-sm font-semibold text-amber-900">Human Review Required</h4>
-              <p className="text-sm text-amber-700 mt-1 leading-relaxed">
-                These deliverables are watermarked as requiring human legal review before any action is taken. 
-                The automated confidence threshold was not met — see the Guardrails stage for specific details.
-              </p>
-            </div>
+        <div className="flex items-start gap-3 p-4 bg-warning-50 border border-warning-200 rounded-lg">
+          <AlertTriangle className="w-4 h-4 text-warning-600 mt-0.5 shrink-0" />
+          <div>
+            <h4 className="text-sm font-semibold text-warning-900">Human review required</h4>
+            <p className="text-xs text-warning-700 mt-1 leading-relaxed">
+              These deliverables require human legal review before any action is taken. Confidence threshold was not met — see Guardrails stage for details.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Summary stats */}
+      {/* Summary metrics */}
       <div>
-        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Deliverable Summary</h4>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm text-center">
-            <div className="text-3xl font-serif font-bold text-slate-900">{deliverables.length}</div>
-            <div className="text-xs text-slate-500 mt-1">Documents Ready</div>
+        <h4 className="section-label mb-3">Deliverable summary</h4>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="metric-card text-center">
+            <div className="text-xl font-semibold text-gray-900 tabular-nums">{deliverables.length}</div>
+            <div className="text-[11px] text-gray-500">Documents ready</div>
           </div>
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm text-center">
-            <div className="text-3xl font-serif font-bold text-slate-900">
-              {deliverables.filter(d => d.format === 'Markdown').length}
+          <div className="metric-card text-center">
+            <div className="text-xl font-semibold text-gray-900 tabular-nums">
+              {deliverables.filter((d) => d.format === 'Markdown').length}
             </div>
-            <div className="text-xs text-slate-500 mt-1">Markdown Reports</div>
+            <div className="text-[11px] text-gray-500">Markdown reports</div>
           </div>
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm text-center">
-            <div className="text-3xl font-serif font-bold text-slate-900">
-              {deliverables.filter(d => d.format === 'JSON').length}
+          <div className="metric-card text-center">
+            <div className="text-xl font-semibold text-gray-900 tabular-nums">
+              {deliverables.filter((d) => d.format === 'JSON').length}
             </div>
-            <div className="text-xs text-slate-500 mt-1">Structured Data</div>
+            <div className="text-[11px] text-gray-500">Structured data</div>
           </div>
         </div>
       </div>
 
       {/* Download cards */}
       <div>
-        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Download Documents</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <h4 className="section-label mb-3">Download documents</h4>
+        <div className="grid grid-cols-2 gap-3">
           {deliverables.map((deliverable, idx) => {
             const FormatIcon = FORMAT_ICONS[deliverable.format] || FileText;
-            const formatColor = FORMAT_COLORS[deliverable.format] || 'bg-slate-100 text-slate-700 border-slate-200';
+            const formatColor = FORMAT_COLORS[deliverable.format] || 'bg-gray-50 text-gray-700';
 
             return (
               <div
                 key={deliverable.id}
-                className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-slate-300 transition-all group cursor-pointer animate-slide-up"
+                className="card-interactive p-4 cursor-pointer group animate-slide-up"
                 style={{ animationDelay: `${idx * 60}ms` }}
                 onClick={() => handleDownload(deliverable)}
               >
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${formatColor}`}>
-                      <FormatIcon className="w-5 h-5" />
-                    </div>
-                    <button className="w-9 h-9 rounded-lg bg-slate-100 group-hover:bg-slate-900 flex items-center justify-center transition-colors">
-                      <Download className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
-                    </button>
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${formatColor}`}>
+                    <FormatIcon className="w-4 h-4" />
                   </div>
+                  <button className="w-7 h-7 rounded-md bg-gray-100 group-hover:bg-gray-900 flex items-center justify-center transition-colors duration-150">
+                    <Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors duration-150" />
+                  </button>
+                </div>
 
-                  <h4 className="text-sm font-semibold text-slate-900 mb-1.5">
-                    {deliverable.name}
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                    {deliverable.description}
-                  </p>
+                <h4 className="text-sm font-medium text-gray-900 mb-1">
+                  {deliverable.name}
+                </h4>
+                <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                  {deliverable.description}
+                </p>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${formatColor}`}>
-                      {deliverable.format}
+                <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${formatColor}`}>
+                    {deliverable.format}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-gray-400 font-mono">{deliverable.size}</span>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <Clock className="w-2.5 h-2.5" />
+                      {new Date(deliverable.timestamp).toLocaleTimeString()}
                     </span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-slate-400">{deliverable.size}</span>
-                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        {new Date(deliverable.timestamp).toLocaleTimeString()}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -153,17 +143,11 @@ export default function DeliverablesStage({ matter, stage }: Props) {
       </div>
 
       {/* Disclaimer */}
-      <div className="p-5 rounded-xl bg-slate-50 border border-slate-200">
-        <div className="flex items-start gap-3">
-          <Shield className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              <span className="font-semibold text-slate-700">Important:</span> These deliverables are generated by AI and should be reviewed by qualified legal counsel before taking action. 
-              LexForge provides analysis to assist — not replace — professional legal judgment. 
-              All recommendations are based on the document text provided and publicly available legal standards.
-            </p>
-          </div>
-        </div>
+      <div className="flex items-start gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100">
+        <Shield className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+        <p className="text-xs text-gray-500 leading-relaxed">
+          <span className="font-semibold text-gray-700">Important:</span> These deliverables are generated by AI and should be reviewed by qualified legal counsel before taking action. LexForge provides analysis to assist — not replace — professional legal judgment.
+        </p>
       </div>
     </div>
   );

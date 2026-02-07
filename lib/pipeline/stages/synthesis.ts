@@ -14,52 +14,94 @@ async function synthesizeSingleIssue(
 ): Promise<Issue> {
   if (!issue.research) return issue;
 
-  const systemPrompt = `You are a senior managing partner at a top-tier law firm, known for delivering precise, actionable legal judgment. You synthesize research from multiple specialists into clear, decisive recommendations.
+  const audienceIsFounder = matter.audience === 'founder';
+  const isSafe = matter.docType === 'safe';
 
-Your synthesis must:
-1. Weigh all three research perspectives (market norms, risk impact, negotiation leverage)
-2. Account for the client's risk tolerance and the specific deal context
-3. Provide a single, clear recommendation with exact next steps
-4. Assign a confidence score reflecting the strength of evidence and certainty of outcome
-5. Explain WHY in terms the ${matter.audience === 'founder' ? 'founder can understand and act on immediately' : 'legal counsel can use to advise their client'}
+  const systemPrompt = `You are the partner-in-charge at a top-3 Silicon Valley venture law firm (Fenwick & West / Cooley / Wilson Sonsini caliber), personally responsible for signing off on every piece of advice that leaves the firm. You have 25+ years of experience closing venture financings and have personally advised on over 3,000 deals.
 
-Confidence calibration:
-- 0.95+: Clear market standard violation with strong precedent
-- 0.85-0.94: Strong evidence, minor ambiguity
-- 0.75-0.84: Good evidence, some judgment required
-- 0.65-0.74: Mixed signals, professional judgment call
-- <0.65: Significant uncertainty, needs human review`;
+**Your Synthesis Framework — The "Partner Decision Protocol":**
 
-  const userPrompt = `Synthesize all research into a final recommendation:
+1. **Evidence Triangulation**
+   Weigh all three research inputs (market norms, risk impact, negotiation leverage) and identify:
+   - Where they AGREE: high-confidence signal → decisive recommendation
+   - Where they DISAGREE: flag the tension, explain which perspective you weight more heavily and WHY
+   - What's MISSING: identify any information gaps that affect your confidence
+
+2. **Decision Architecture**
+   Structure your recommendation using this hierarchy:
+   a) **Primary Recommendation**: The single most important thing the client should do
+   b) **Fallback Position**: If the primary ask is rejected, what's the acceptable compromise?
+   c) **Walk-Away Threshold**: At what point should the client refuse to proceed?
+   d) **Accept Criteria**: Under what conditions is the current term actually acceptable?
+
+3. **Confidence Calibration (Bayesian approach)**
+   Start with a base rate from market data, then adjust:
+   - +0.10 if all three research perspectives align
+   - +0.05 if strong RAG/citation support exists
+   - -0.05 if research perspectives conflict on materiality
+   - -0.10 if this is a novel/unusual structure with limited precedent
+   - -0.15 if the economic impact is highly scenario-dependent
+   
+   Final calibration:
+   - 0.92-1.0: Near-certain — black-letter law or mathematical fact
+   - 0.82-0.91: High confidence — strong evidence, minor judgment
+   - 0.72-0.81: Moderate — solid basis but reasonable minds could differ
+   - 0.62-0.71: Low-moderate — significant judgment involved, important caveats
+   - <0.62: Low — high uncertainty, recommend human attorney review
+
+4. **Audience Calibration**
+   ${audienceIsFounder ? `FOUNDER MODE: 
+   - Lead with the action verb: "Push back on...", "Accept...", "Counter-propose..."
+   - Quantify everything: "$X impact", "Y% dilution"
+   - Include the emotional reality: "This might feel confrontational, but it's standard practice"
+   - Provide word-for-word scripts for investor conversations
+   - Never use unexplained legal jargon` : `COUNSEL MODE:
+   - Lead with the legal standard and how this deviates
+   - Reference specific NVCA/YC model language, Del. Code sections, or case law
+   - Provide exact proposed markup language
+   - Include strategic sequencing advice (when to raise this in negotiation)
+   - Note any malpractice risk if this issue is not flagged`}
+
+5. **Risk-Tolerance Integration**
+   ${matter.riskTolerance === 'low' ? 'Conservative client: recommend the most protective position available. Flag even minor deviations. The client would rather lose the deal than accept unfavorable terms.' : matter.riskTolerance === 'high' ? 'Aggressive/speed-focused client: recommend changes ONLY for issues with material economic impact (>2% dilution or control implications). The client values speed-to-close over maximum protection.' : 'Balanced client: recommend changes for material issues while acknowledging reasonable trade-offs. Identify which issues are "worth the fight" and which are acceptable concessions.'}`;
+
+  const userPrompt = `**PARTNER SYNTHESIS REQUIRED — ${issue.severity.toUpperCase()} SEVERITY**
+
+Synthesize all research into a single, authoritative recommendation that the client can act on today.
 
 **Issue:** ${issue.title}
 **Severity:** ${issue.severity}
-**Clause:** ${issue.clauseRef}
-**Explanation:** ${issue.explanation}
+**Clause Reference:** ${issue.clauseRef}
+**Initial Analysis:** ${issue.explanation}
 
-**Research — Market Norms:**
+**RESEARCH INPUTS:**
+
+📊 **Market Intelligence (Specialist 1):**
 ${issue.research.marketNorms}
 
-**Research — Risk Impact:**
+💰 **Financial Impact Analysis (Specialist 2):**
 ${issue.research.riskImpact}
 
-**Research — Negotiation Leverage:**
+🤝 **Negotiation Strategy (Specialist 3):**
 ${issue.research.negotiationLeverage}
 
-**Client Risk Tolerance:** ${matter.riskTolerance}
-**Audience:** ${matter.audience === 'founder' ? 'Founder (plain English, direct, actionable)' : 'Legal Counsel (technical, with citations and legal reasoning)'}
+**DEAL CONTEXT:**
+- Document Type: ${isSafe ? 'SAFE' : 'Term Sheet'}
+- Risk Tolerance: ${matter.riskTolerance.toUpperCase()}
+- Total Issues Found: ${matter.issues.length}
+- This Issue's Position: ${matter.issues.findIndex(i => i.id === issue.id) + 1} of ${matter.issues.length}
 
 Return JSON:
 {
-  "recommendation": "${matter.audience === 'founder' ? 'Clear, direct recommendation in plain English. Start with what to DO (e.g., \"Push back on this term. Ask the investor to...\"). Include the specific ask and fallback position.' : 'Technical legal recommendation with specific proposed language changes, legal basis, and strategic rationale. Reference applicable standards.'}",
-  "confidence": 0.XX (calibrated score reflecting evidence strength),
-  "reasoning": "2-3 sentences explaining why this matters in practical terms and what happens if the client takes no action"
+  "recommendation": "${audienceIsFounder ? 'Complete recommendation in 4-6 sentences. Structure: (1) Clear action verb opening — what to DO, (2) The specific ask with exact numbers or language, (3) The fallback position if the primary ask is rejected, (4) Why this matters in practical/dollar terms, (5) How to bring this up with the investor (tone, timing, framing). Must be plain English a non-lawyer can understand and act on immediately.' : 'Complete recommendation in 4-6 sentences. Structure: (1) Legal standard and how this deviates, (2) Proposed markup language with exact clause modifications, (3) Legal basis (NVCA model, Del. Code, case law), (4) Strategic sequencing recommendation, (5) Fallback position and minimum acceptable terms. Must be technical and actionable for experienced counsel.'}",
+  "confidence": 0.XX,
+  "reasoning": "3-4 sentences explaining: (1) The key evidence that drives your recommendation, (2) What happens if the client takes NO action — the specific downside scenario with numbers, (3) Any important caveats or conditions that affect this advice, (4) How this recommendation interacts with other issues in the document"
 }`;
 
   const result = await callLLMJSON<SynthesisResult>(
     systemPrompt,
     userPrompt,
-    { temperature: 0.2, maxTokens: 1200 }
+    { temperature: 0.2, maxTokens: 2000 }
   );
 
   return {

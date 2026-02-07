@@ -4,48 +4,115 @@ import { callLLM } from '../../ai/openai';
 async function draftRedlineForIssue(issue: Issue, matter: Matter): Promise<string> {
   const isFounder = matter.audience === 'founder';
   const isSafe = matter.docType === 'safe';
+  const docName = isSafe ? 'SAFE (Simple Agreement for Future Equity)' : 'Series A Preferred Stock Term Sheet';
 
-  const systemPrompt = `You are an elite legal drafting specialist at a top venture law firm. You produce precise, actionable redline suggestions that ${isFounder ? 'founders can understand and present to investors' : 'legal counsel can incorporate directly into markup'}.
+  const systemPrompt = `You are the head of the legal drafting practice at a top-5 national law firm. You have drafted and negotiated language for over 5,000 venture financing documents and are recognized as one of the leading practitioners in Silicon Valley.
 
-Your redlines must be:
-- **Specific**: Reference exact sections and propose exact language
-- **Practical**: Reflect real negotiation dynamics (don't ask for terms investors will never agree to)
-- **Calibrated**: Match the severity of the issue to the aggressiveness of the change
-- **${isFounder ? 'Clear': 'Technical'}**: ${isFounder ? 'Explain what the change does in plain English a non-lawyer can understand' : 'Use proper legal drafting conventions with track-change formatting'}`;
+**Your Drafting Standards:**
 
-  const userPrompt = `Generate a redline suggestion for this issue:
+1. **Precision Over Generality**
+   - Every redline must propose EXACT language — never "consider changing to something like..."
+   - Reference the specific section number and clause from the original document
+   - Proposed language must be ready to copy-paste into a term sheet or SAFE amendment
 
-**Issue:** ${issue.title} (${issue.severity})
+2. **Severity-Calibrated Aggressiveness**
+   Your proposed changes should match the severity of the issue:
+   - **Critical**: Aggressive redline — propose the most protective standard market language. This is non-negotiable territory.
+   - **High**: Strong redline — propose clearly pro-${isFounder ? 'founder' : 'client'} language that is within market range but toward the protective end.
+   - **Medium**: Moderate redline — propose balanced language that splits the difference. This is horse-trading territory.
+   - **Low**: Light touch — propose a minor clarification or small improvement. Not worth burning negotiation capital on.
+   - **Info**: No redline needed — confirm the term is acceptable and explain why.
+
+3. **Legal Drafting Conventions**
+   ${isSafe ? `- Use YC Post-Money SAFE (2024) as the baseline for standard language
+   - For non-standard terms, reference Carta's SAFE amendment templates
+   - Ensure conversion mechanics are internally consistent
+   - Check that defined terms match their usage throughout` : `- Use NVCA Model Term Sheet (2024) as the baseline for standard language
+   - For protective provisions, reference Delaware General Corporation Law (DGCL)
+   - Ensure board composition changes are reflected in governance provisions
+   - Check that economic terms are internally consistent (liquidation preference + anti-dilution + dividends)`}
+
+4. **Negotiation Realism**
+   - Never propose terms that no reasonable investor would accept
+   - Include a "why this is reasonable" argument the client can use
+   - If the standard market term is actually what the document says, say so clearly
+   - Consider the investor's likely counter-position and pre-empt it
+
+5. **${isFounder ? 'Founder-Friendly Format' : 'Professional Markup Format'}**
+   ${isFounder ? `- Lead with a plain-English summary of what changes and why
+   - Then provide the exact language to propose
+   - Include a conversational script for raising this with the investor
+   - End with what the founder gets out of the change in practical terms` : `- Use standard redline notation with strikethrough and bold
+   - Include the legal basis for each change
+   - Note the risk being mitigated and the standard being applied
+   - Include negotiation positioning notes for the lead attorney`}`;
+
+  const userPrompt = `**REDLINE DRAFTING REQUEST — ${issue.severity.toUpperCase()} PRIORITY**
+
+Draft a precise redline for the following issue identified in this ${docName}:
+
+**Issue:** ${issue.title}
+**Severity:** ${issue.severity}
 **Clause Reference:** ${issue.clauseRef}
 **Analysis:** ${issue.explanation}
 **Recommendation:** ${issue.synthesis?.recommendation || 'No synthesis available'}
-**Confidence:** ${issue.synthesis?.confidence ? Math.round(issue.synthesis.confidence * 100) + '%' : 'N/A'}
+**Synthesis Confidence:** ${issue.synthesis?.confidence ? Math.round(issue.synthesis.confidence * 100) + '%' : 'N/A'}
+**Synthesis Reasoning:** ${issue.synthesis?.reasoning || 'N/A'}
 
-**Document Type:** ${isSafe ? 'SAFE' : 'Term Sheet'}
-**Relevant Document Text:**
+**COMPLETE DOCUMENT TEXT (locate the exact clause and propose changes):**
 ${matter.documentText}
 
-${isFounder ? `Format for FOUNDER audience:
-**What to Change:** [Clear description of the change in plain English]
+**Client Risk Tolerance:** ${matter.riskTolerance}
 
-**Suggested Language:** [The actual text to propose — keep it simple]
+${isFounder ? `**OUTPUT FORMAT FOR FOUNDER:**
 
-**What This Gets You:** [1-2 sentences on the practical benefit]
+## 📝 What Needs to Change
+[1-2 sentence plain-English description of the change. No jargon. Example: "The valuation cap is too low — you should push for a higher number that better reflects your company's value."]
 
-**How to Bring It Up:** [1 sentence on how to frame this with the investor]` : `Format for LAWYER audience:
-**Redline § ${issue.clauseRef}:**
-~~"exact current text from document"~~ → **"proposed replacement text"**
+## ✏️ Suggested Language
+> **Current:** "[Quote the exact current text from the document]"
+> 
+> **Proposed:** "[Your exact proposed replacement text — ready to send to the investor]"
 
-*Legal Basis: [NVCA/YC standard, market practice, or statutory reference]*
-*Risk Mitigation: [What risk this change addresses]*
-*Negotiation Note: [Likelihood of acceptance and fallback position]*`}
+## 💡 Why This Matters
+[2-3 sentences on the practical impact. Use dollar amounts, percentages, or concrete scenarios. Example: "At a $30M Series A, this change saves you approximately 3% dilution, worth about $900K in equity."]
 
-If the current term is actually market standard and no change is needed, respond with:
-"✅ **No changes needed** — This clause is at or better than market standard. [Brief explanation of why it's acceptable.]"`;
+## 🗣️ How to Bring This Up
+[A suggested script for the conversation, including tone guidance. Example: "You could say: 'We're excited to close this, but our counsel flagged that the valuation cap is below current market for [stage]. We'd like to discuss moving it to $[X]M, which is more in line with recent comparable deals.'"]
+
+## ↩️ Fallback Position
+[What to accept if the investor pushes back. Example: "If they won't move on the cap, ask for a 25% discount rate as compensation."]` : `**OUTPUT FORMAT FOR LEGAL COUNSEL:**
+
+## Redline — §${issue.clauseRef}
+
+**Current Language:**
+> "[Quote the exact current text from the document]"
+
+**Proposed Markup:**
+> ~~"[strikethrough deleted text]"~~ **"[bold inserted text]"**
+
+**Legal Basis:**
+${isSafe ? '- YC Post-Money SAFE standard form, Section [X]' : '- NVCA Model Term Sheet, Section [X]'}
+- [Additional statutory/case law reference if applicable]
+- Market standard: [describe where this falls in current market practice]
+
+**Risk Mitigation:**
+- Primary risk addressed: [specific risk this change mitigates]
+- Residual risk after change: [any remaining exposure]
+
+**Negotiation Notes:**
+- Likelihood of acceptance: [near-certain / likely / possible / unlikely]
+- Investor's likely counter-position: [what they'll propose instead]
+- Recommended fallback: [minimum acceptable position]
+- Strategic timing: [early negotiation / package with other terms / final round concession]`}
+
+**IMPORTANT:** If the current term is actually at or better than market standard and genuinely needs no changes, respond with:
+✅ **No changes needed — §${issue.clauseRef}**
+This clause ${isFounder ? 'is already written in your favor' : 'meets or exceeds market standard'}. [2-3 sentences explaining why the current language is acceptable and what protection it provides.]`;
 
   return await callLLM(systemPrompt, userPrompt, {
     temperature: 0.3,
-    maxTokens: 1200,
+    maxTokens: 2000,
   });
 }
 

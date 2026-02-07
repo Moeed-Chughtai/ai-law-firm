@@ -23,52 +23,100 @@ export async function runGuardrails(matter: Matter): Promise<Partial<Matter>> {
   const highCount = matter.issues.filter((i) => i.severity === 'high').length;
   const issuesWithSynthesis = matter.issues.filter((i) => i.synthesis).length;
   const issuesWithRedlines = matter.issues.filter((i) => i.redline).length;
+  const lowConfidenceIssues = matter.issues.filter(
+    (i) => i.synthesis && i.synthesis.confidence < 0.6
+  );
+  const adversarialCritiquesCount = (matter.adversarialCritiques || []).length;
 
-  const systemPrompt = `You are a legal compliance and quality assurance officer. You evaluate whether AI-generated legal analysis meets professional standards before delivery to clients. Your role is critical — you are the last line of defense before the client sees this work.
+  const systemPrompt = `You are the General Counsel and Chief Compliance Officer of a legal AI company. You are personally liable for ensuring that AI-generated legal analysis meets professional standards before delivery to any client. You have deep expertise in legal ethics, malpractice standards, and AI safety in legal contexts.
 
-Evaluate rigorously but fairly. The goal is to ensure quality and flag genuine risks, not to block good work.`;
+**Your Guardrail Assessment Framework:**
 
-  const userPrompt = `Evaluate guardrails for this legal matter:
+1. **Jurisdiction Validation (CRITICAL — errors here create liability)**
+   - Verify that the analysis is appropriate for ${matter.jurisdiction} law
+   - Check that any statutory references are correct for the jurisdiction
+   - Flag if the document contains choice-of-law provisions that create conflicts
+   - ${matter.jurisdiction === 'delaware' ? 'Verify Delaware General Corporation Law (DGCL) compliance, including Title 8 requirements' : matter.jurisdiction === 'california' ? 'Verify California Corporations Code compliance and any SEC requirements for California-based issuers' : 'Verify applicable state corporate law compliance'}
+   - Flag if international parties create potential cross-border issues
 
-**Document Type:** ${matter.docType === 'safe' ? 'SAFE' : 'Term Sheet'}
-**Jurisdiction:** ${matter.jurisdiction}
-**Risk Tolerance:** ${matter.riskTolerance}
-**Overall Confidence:** ${Math.round(confidenceScore * 100)}%
-**Required Threshold:** ${Math.round(requiredThreshold * 100)}%
+2. **Citation & Evidence Completeness**
+   Assessment criteria:
+   - **Pass**: All recommendations are supported by identifiable legal reasoning (market standards, statutory references, or established practice)
+   - **Warning**: Some recommendations rely on general knowledge without specific grounding — acceptable but note for improvement
+   - **Fail**: One or more recommendations make specific factual claims that appear unsupported or potentially fabricated (e.g., citing specific percentages without clear basis)
 
-**Analysis Quality Metrics:**
-- Issues Found: ${matter.issues.length}
-- Critical Issues: ${criticalCount}
-- High Issues: ${highCount}
-- Issues with Complete Synthesis: ${issuesWithSynthesis}/${matter.issues.length}
-- Issues with Redlines: ${issuesWithRedlines}/${matter.issues.length}
+3. **Confidence Calibration Audit**
+   - Check if confidence scores across issues are internally consistent
+   - Flag if all scores cluster suspiciously (e.g., all between 0.80-0.85 — suggests auto-calibration rather than genuine assessment)
+   - Check for appropriate spread: complex/novel issues should have lower confidence than straightforward market-standard deviations
 
-**Adversarial Review:**
-- Critiques: ${(matter.adversarialCritiques || []).length}
-- Draft Revised: ${matter.draftRevised ? 'Yes' : 'No'}
+4. **Hallucination Detection**
+   - Cross-reference key claims in the analysis against the original document text
+   - Flag any assertions about what the document says that don't match the actual document
+   - Check that clause references (section numbers) actually exist in the document
+   - Verify that market data claims are plausible (not fabricated statistics)
 
-**Recommendations Summary:**
+5. **Ethical & Professional Standards**
+   - Does the analysis include appropriate disclaimers about AI-generated content?
+   - Does it correctly identify when human attorney review is essential?
+   - Are recommendations within the bounds of what a competent attorney would advise?
+   - Does the analysis avoid unauthorized practice of law (UPL) issues?
+
+6. **Escalation Criteria (ANY of these = mandatory escalation):**
+   a) Confidence score below required threshold for risk tolerance
+   b) Risk tolerance "low" AND any critical-severity issues present
+   c) Citation completeness is "fail"
+   d) Adversarial review flagged material errors (draftRevised = true)
+   e) Any individual issue has synthesis confidence below 0.55
+   f) Jurisdiction check fails
+   g) Suspected hallucination detected
+   h) Analysis covers fewer issues than expected for the document type (${matter.docType === 'safe' ? 'SAFE should typically have 4-10 flagged items' : 'Term Sheet should typically have 6-15 flagged items'})`;
+
+  const userPrompt = `**GUARDRAIL ASSESSMENT — FINAL QUALITY GATE BEFORE CLIENT DELIVERY**
+
+Evaluate whether this AI-generated legal analysis meets professional standards and is safe to deliver.
+
+**MATTER OVERVIEW:**
+- Document Type: ${matter.docType === 'safe' ? 'SAFE (Simple Agreement for Future Equity)' : 'Series A Preferred Stock Term Sheet'}
+- Jurisdiction: ${matter.jurisdiction}
+- Risk Tolerance: ${matter.riskTolerance.toUpperCase()}
+- Audience: ${matter.audience}
+
+**QUALITY METRICS:**
+| Metric | Value | Target |
+|--------|-------|--------|
+| Overall Confidence | ${Math.round(confidenceScore * 100)}% | ≥${Math.round(requiredThreshold * 100)}% |
+| Total Issues Found | ${matter.issues.length} | ${matter.docType === 'safe' ? '4-10' : '6-15'} |
+| Critical Issues | ${criticalCount} | — |
+| High Issues | ${highCount} | — |
+| Issues with Synthesis | ${issuesWithSynthesis}/${matter.issues.length} | 100% |
+| Issues with Redlines | ${issuesWithRedlines}/${matter.issues.length} | 100% |
+| Low-Confidence Issues (<0.6) | ${lowConfidenceIssues.length} | 0 |
+| Adversarial Critiques | ${adversarialCritiquesCount} | — |
+| Draft Revised Flag | ${matter.draftRevised ? 'YES ⚠️' : 'No'} | No |
+
+**ADVERSARIAL REVIEW FINDINGS:**
+${(matter.adversarialCritiques || []).map((c, i) => `${i + 1}. ${c}`).join('\n') || 'No adversarial critiques recorded.'}
+
+**ISSUE-LEVEL CONFIDENCE DISTRIBUTION:**
 ${matter.issues
   .filter((i) => i.synthesis)
-  .map((i) => `- ${i.title} (${i.severity}, ${Math.round((i.synthesis?.confidence || 0) * 100)}%): ${i.synthesis?.recommendation?.substring(0, 100)}`)
+  .map((i) => `- ${i.title} (${i.severity}): ${Math.round((i.synthesis?.confidence || 0) * 100)}% confidence`)
   .join('\n')}
 
-**Guardrail Checks:**
+**SAMPLE RECOMMENDATIONS (check for quality and groundedness):**
+${matter.issues
+  .filter((i) => i.synthesis)
+  .slice(0, 5)
+  .map((i) => `- **${i.title}**: ${i.synthesis?.recommendation?.substring(0, 200)}`)
+  .join('\n')}
 
-1. **Jurisdiction Check**: Is this analysis appropriate for ${matter.jurisdiction} corporate law? Are there any jurisdiction-specific issues?
+**ORIGINAL DOCUMENT (first 2000 chars for cross-reference):**
+${matter.documentText.substring(0, 2000)}
 
-2. **Citation Completeness**: Do the recommendations appear backed by substantive legal reasoning? Are there any unsupported claims?
+**ASSESSMENT REQUIRED:**
+Evaluate all six guardrail dimensions and return:
 
-3. **Confidence Threshold**: Score ${Math.round(confidenceScore * 100)}% vs Required ${Math.round(requiredThreshold * 100)}%
-
-**Escalation Rules (trigger ANY = escalate):**
-- Confidence below required threshold
-- Risk tolerance "low" AND any critical issues present
-- Citation completeness is "fail"
-- Adversarial review flagged material errors (draftRevised = true)
-- Any issue has confidence below 0.6
-
-Return JSON:
 {
   "jurisdictionCheck": "pass" | "fail",
   "citationCompleteness": "pass" | "warning" | "fail",
@@ -77,43 +125,76 @@ Return JSON:
     "required": ${requiredThreshold},
     "pass": ${confidenceScore >= requiredThreshold}
   },
-  "escalationRequired": boolean,
-  "escalationReason": "Specific reason(s) for escalation, or null if not required"
+  "escalationRequired": boolean (apply ALL escalation criteria — be strict),
+  "escalationReason": "Detailed, specific reason(s) for escalation, listing each triggered criterion. Or null if all checks pass."
 }`;
 
   const guardrails = await callLLMJSON<GuardrailAnalysis>(
     systemPrompt,
     userPrompt,
-    { temperature: 0.1, maxTokens: 1000 }
+    { temperature: 0.1, maxTokens: 1500 }
   );
 
-  // Override confidence threshold with deterministic check
+  // Override confidence threshold with deterministic check (LLM can't change math)
   guardrails.confidenceThreshold = {
     score: confidenceScore,
     required: requiredThreshold,
     pass: confidenceScore >= requiredThreshold,
   };
 
-  // Deterministic escalation overrides
+  // Deterministic escalation overrides — these ALWAYS trigger regardless of LLM opinion
+  const escalationReasons: string[] = [];
+
+  if (guardrails.escalationReason) {
+    escalationReasons.push(guardrails.escalationReason);
+  }
+
   if (matter.riskTolerance === 'low' && criticalCount > 0) {
     guardrails.escalationRequired = true;
-    guardrails.escalationReason = guardrails.escalationReason
-      ? `${guardrails.escalationReason}; Low risk tolerance with ${criticalCount} critical issue(s)`
-      : `Low risk tolerance with ${criticalCount} critical issue(s) — human review recommended`;
+    escalationReasons.push(
+      `Low risk tolerance with ${criticalCount} critical issue(s) — human review recommended before proceeding`
+    );
   }
 
   if (matter.draftRevised) {
     guardrails.escalationRequired = true;
-    guardrails.escalationReason = guardrails.escalationReason
-      ? `${guardrails.escalationReason}; Adversarial review flagged material concerns`
-      : 'Adversarial review flagged material concerns requiring human oversight';
+    escalationReasons.push(
+      'Adversarial review flagged material concerns requiring human oversight'
+    );
   }
 
   if (!guardrails.confidenceThreshold.pass) {
     guardrails.escalationRequired = true;
-    guardrails.escalationReason = guardrails.escalationReason
-      ? `${guardrails.escalationReason}; Confidence ${Math.round(confidenceScore * 100)}% below required ${Math.round(requiredThreshold * 100)}%`
-      : `Confidence score ${Math.round(confidenceScore * 100)}% is below the required ${Math.round(requiredThreshold * 100)}% threshold`;
+    escalationReasons.push(
+      `Overall confidence ${Math.round(confidenceScore * 100)}% is below the required ${Math.round(requiredThreshold * 100)}% threshold for ${matter.riskTolerance} risk tolerance`
+    );
+  }
+
+  if (lowConfidenceIssues.length > 0) {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      `${lowConfidenceIssues.length} issue(s) have synthesis confidence below 0.60: ${lowConfidenceIssues.map(i => i.title).join(', ')}`
+    );
+  }
+
+  if (guardrails.jurisdictionCheck === 'fail') {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      `Jurisdiction validation failed for ${matter.jurisdiction} — analysis may contain jurisdiction-inappropriate references`
+    );
+  }
+
+  if (guardrails.citationCompleteness === 'fail') {
+    guardrails.escalationRequired = true;
+    escalationReasons.push(
+      'Citation completeness check failed — one or more recommendations may contain unsupported factual claims'
+    );
+  }
+
+  // Consolidate escalation reasons
+  if (escalationReasons.length > 0) {
+    guardrails.escalationRequired = true;
+    guardrails.escalationReason = escalationReasons.join('; ');
   }
 
   return {

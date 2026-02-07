@@ -11,62 +11,107 @@ export async function runAdversarialReview(
   matter: Matter
 ): Promise<Partial<Matter>> {
   const isSafe = matter.docType === 'safe';
-  const docName = isSafe ? 'SAFE' : 'Term Sheet';
+  const docName = isSafe ? 'SAFE (Simple Agreement for Future Equity)' : 'Series A Preferred Stock Term Sheet';
 
-  const systemPrompt = `You are a ruthless, independent legal quality assurance reviewer — the "red team" at a top law firm. Your job is to find flaws, gaps, and weaknesses in the initial analysis before it reaches the client. You are adversarial but constructive.
+  const systemPrompt = `You are the Chief Quality Officer and senior litigation partner at a top-10 Am Law firm. You were recruited specifically because you are the most demanding, detail-oriented legal mind in the industry. You have been retained as an independent "red team" reviewer — your sole job is to find every flaw, gap, and weakness in this analysis before it reaches the client.
 
-You challenge on five dimensions:
-1. **Completeness**: Are there issues in the document that were MISSED entirely?
-2. **Severity Accuracy**: Are any issues over- or under-rated in severity?
-3. **Recommendation Quality**: Are the recommendations specific, practical, and likely to succeed in negotiation?
-4. **Legal Accuracy**: Are there any legal errors or outdated references?
-5. **Citation Gaps**: Are claims backed by evidence, or are they unsupported assertions?
+**Your adversarial review mandate has THREE levels of increasing severity:**
 
-You are known for catching the issues that slip through initial review. Be thorough and specific.`;
+**LEVEL 1 — Completeness Audit (did they miss anything?)**
+- Cross-reference the ORIGINAL document against the issues list — is every material clause covered?
+- Check for MISSING issues: provisions that should have been flagged but weren't
+- Check for PHANTOM issues: assertions about the document that don't match its actual text
+- Verify that ${isSafe ? 'all standard SAFE sections were analyzed (definitions, conversion mechanics, dissolution, MFN, pro-rata, information rights)' : 'all standard term sheet sections were analyzed (economics, control, protective provisions, governance, information rights, exit mechanisms)'}
+- Verify cross-clause interactions were considered (does the anti-dilution provision interact with the option pool? Does the liquidation preference interact with the participation rights?)
+
+**LEVEL 2 — Accuracy & Calibration Audit (is their analysis correct?)**
+- Severity accuracy: Is each issue rated at the correct severity? Would a panel of 10 experienced venture lawyers agree with this rating, or would the majority rate it differently?
+- Confidence accuracy: Are confidence scores properly calibrated? A score of 0.9 should mean "9 out of 10 experienced lawyers would reach the same conclusion"
+- Market data accuracy: Are the market benchmarks and percentile claims plausible? Flag any data points that seem outdated, fabricated, or cherry-picked
+- Economic modeling accuracy: Are the dilution calculations and scenario analyses mathematically sound?
+- Recommendation accuracy: Would a reasonable lawyer be comfortable putting their bar number behind each recommendation?
+
+**LEVEL 3 — Client-Readiness Audit (is this safe to deliver?)**
+- Are there any recommendations that could constitute malpractice if a real lawyer delivered them?
+- Are there any factual assertions that could embarrass the firm if challenged by opposing counsel?
+- Is the analysis appropriately hedged where uncertainty exists?
+- Are there any recommendations that ignore practical deal dynamics (e.g., suggesting terms no investor would accept)?
+- Is the overall tone appropriate for the ${matter.audience === 'founder' ? 'founder audience (clear, supportive, actionable)' : 'legal counsel audience (precise, technical, defensible)'}?
+
+**Your output should be:**
+- SPECIFIC: Reference issues by name, cite specific claims, point to exact deficiencies
+- CONSTRUCTIVE: Every critique must include a suggested fix or clarification
+- BALANCED: Acknowledge what the analysis did WELL (at least 1-2 points)
+- DECISIVE: Clearly state whether this analysis is safe to deliver to the client as-is
+
+**The "draftRevised" flag should be TRUE only if you find a MATERIAL error that would:**
+- Mislead the client into making a harmful decision
+- Contain a factual error about what the document actually says
+- Miss a critical or high-severity issue that a competent attorney would catch
+- Provide a recommendation that constitutes genuinely bad legal advice
+
+Minor calibration disagreements (e.g., "I'd rate this medium, not low") do NOT warrant revision — note them but don't flag draftRevised.`;
 
   const issuesSummary = matter.issues
     .map((i, idx) => {
-      let details = `${idx + 1}. **${i.title}** (${i.severity})\n   Clause: ${i.clauseRef}\n   Explanation: ${i.explanation}`;
+      let details = `### Issue ${idx + 1}: ${i.title}
+**Severity:** ${i.severity} | **Confidence:** ${i.confidence} | **Clause:** ${i.clauseRef}
+**Analysis:** ${i.explanation}`;
+      if (i.research) {
+        details += `\n**Research — Market Norms:** ${i.research.marketNorms.substring(0, 300)}`;
+        details += `\n**Research — Risk Impact:** ${i.research.riskImpact.substring(0, 300)}`;
+        details += `\n**Research — Negotiation:** ${i.research.negotiationLeverage.substring(0, 300)}`;
+      }
       if (i.synthesis) {
-        details += `\n   Recommendation: ${i.synthesis.recommendation}\n   Confidence: ${Math.round(i.synthesis.confidence * 100)}%`;
+        details += `\n**Recommendation:** ${i.synthesis.recommendation}`;
+        details += `\n**Synthesis Confidence:** ${Math.round(i.synthesis.confidence * 100)}%`;
+        details += `\n**Reasoning:** ${i.synthesis.reasoning}`;
       }
       if (i.redline) {
-        details += `\n   Redline: ${i.redline.substring(0, 200)}`;
+        details += `\n**Redline Preview:** ${i.redline.substring(0, 400)}`;
       }
       return details;
     })
-    .join('\n\n');
+    .join('\n\n---\n\n');
 
-  const userPrompt = `Conduct an adversarial review of this ${docName} analysis:
+  const userPrompt = `**ADVERSARIAL RED TEAM REVIEW — FULL ANALYSIS PACKAGE**
 
-**Document Type:** ${docName}
-**Risk Tolerance:** ${matter.riskTolerance}
-**Issues Found:** ${matter.issues.length}
-**Overall Confidence:** ${Math.round((matter.overallConfidence || 0) * 100)}%
+Conduct a rigorous three-level adversarial review of this complete ${docName} analysis before client delivery.
 
-**Original Document (for cross-reference):**
-${matter.documentText.substring(0, 2000)}
+**DOCUMENT METADATA:**
+- Document Type: ${docName}
+- Risk Tolerance: ${matter.riskTolerance}
+- Audience: ${matter.audience}
+- Issues Found: ${matter.issues.length}
+- Overall Confidence: ${Math.round((matter.overallConfidence || 0) * 100)}%
 
-**Complete Analysis to Review:**
+**ORIGINAL DOCUMENT (cross-reference against issues list):**
+${matter.documentText.substring(0, 3000)}
+
+**COMPLETE ANALYSIS TO REVIEW (${matter.issues.length} issues):**
+
 ${issuesSummary}
 
-Provide your adversarial assessment:
+**SEVERITY DISTRIBUTION:**
+- Critical: ${matter.issues.filter(i => i.severity === 'critical').length}
+- High: ${matter.issues.filter(i => i.severity === 'high').length}
+- Medium: ${matter.issues.filter(i => i.severity === 'medium').length}
+- Low: ${matter.issues.filter(i => i.severity === 'low').length}
+- Info: ${matter.issues.filter(i => i.severity === 'info').length}
 
 Return JSON:
 {
   "critiques": [
-    "Specific, actionable critique or confirmation. Each item should either (a) identify a specific flaw with a suggested fix, or (b) confirm that a specific aspect passed review. Be concrete — reference specific issues by name."
+    "Each critique should be 2-4 sentences. Format: '[LEVEL X — Category] Specific finding. Evidence/reasoning. Suggested fix or acknowledgment.' Include 5-8 critique points covering all three levels. At least one should acknowledge something done well."
   ],
-  "draftRevised": true/false (true ONLY if you found material errors that would mislead the client),
-  "revisionReason": "If draftRevised is true, explain what was materially wrong"
-}
-
-Provide 4-6 critique points. At least one should acknowledge something the analysis did well.`;
+  "draftRevised": true/false (TRUE only for material errors that could harm the client — see criteria above),
+  "revisionReason": "If draftRevised is true: specific description of the material error(s) found and what needs to change. If false: null"
+}`;
 
   const result = await callLLMJSON<AdversarialResult>(
     systemPrompt,
     userPrompt,
-    { temperature: 0.4, maxTokens: 2500 }
+    { temperature: 0.4, maxTokens: 3500 }
   );
 
   return {
