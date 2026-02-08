@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pdf from 'pdf-parse';
+// Use lib directly to avoid pdf-parse's index.js test block (reads ./test/data/*.pdf) which runs when bundled on Vercel
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdf = require('pdf-parse/lib/pdf-parse.js');
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
