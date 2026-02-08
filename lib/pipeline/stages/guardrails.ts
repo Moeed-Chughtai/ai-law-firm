@@ -96,7 +96,7 @@ Evaluate whether this AI-generated legal analysis meets professional standards a
 | Issues with Redlines | ${issuesWithRedlines}/${matter.issues.length} | 100% |
 | Low-Confidence Issues (<0.6) | ${lowConfidenceIssues.length} | 0 |
 | Adversarial Critiques | ${adversarialCritiquesCount} | — |
-| Draft Revised Flag | ${matter.draftRevised ? 'YES ⚠️' : 'No'} | No |
+| Draft Revised Flag | ${matter.draftRevised ? 'YES' : 'No'} | No |
 | Adversarial Loop Count | ${matter.adversarialLoopCount || 0} | 0-1 |
 
 **ADVERSARIAL REVIEW FINDINGS:**

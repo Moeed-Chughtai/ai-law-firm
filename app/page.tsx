@@ -117,17 +117,16 @@ export default function IntakePage() {
       }
 
       setKnowledgeUploadSuccess(
-        `✅ Successfully ingested ${data.documentsIngested} document(s) with ${data.totalChunks} chunks`
+        `Successfully ingested ${data.documentsIngested} document(s) with ${data.totalChunks} chunks`
       );
       setKnowledgeFiles([]);
-      
-      // Refresh stats
+
       const statsRes = await fetch('/api/legal-docs?stats=true');
       const statsData = await statsRes.json();
       setKnowledgeStats(statsData.stats || {});
 
     } catch (error) {
-      setKnowledgeUploadSuccess(`❌ ${error instanceof Error ? error.message : 'Upload failed'}`);
+      setKnowledgeUploadSuccess(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setKnowledgeUploading(false);
     }
@@ -273,7 +272,7 @@ export default function IntakePage() {
               {/* Success/Error Message */}
               {knowledgeUploadSuccess && (
                 <div className={`mt-3 p-2 rounded text-xs ${
-                  knowledgeUploadSuccess.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                  knowledgeUploadSuccess.startsWith('Successfully') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
                 }`}>
                   {knowledgeUploadSuccess}
                 </div>

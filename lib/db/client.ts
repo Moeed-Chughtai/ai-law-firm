@@ -1,6 +1,5 @@
 import { Pool, PoolClient } from 'pg';
 
-// Lazy-initialized pool to avoid crashing at import time
 let _pool: Pool | null = null;
 let _initPromise: Promise<void> | null = null;
 let _initialized = false;
@@ -26,13 +25,12 @@ export function getPool(): Pool {
     });
 
     _pool.on('error', (err) => {
-      console.error('❌ PostgreSQL pool error:', err.message);
+      console.error('PostgreSQL pool error:', err.message);
     });
   }
   return _pool;
 }
 
-// Lazy proxy for backward compat — won't crash at import time
 export const pool = new Proxy({} as Pool, {
   get(_target, prop) {
     const realPool = getPool();
@@ -44,7 +42,6 @@ export const pool = new Proxy({} as Pool, {
   },
 });
 
-// Initialize database schema with graceful pgvector handling
 export async function initializeDatabase(): Promise<void> {
   if (_initialized) return;
   if (_initPromise) return _initPromise;
@@ -57,18 +54,16 @@ async function _doInitialize(): Promise<void> {
   const client = await p.connect();
 
   try {
-    // Check if pgvector is available
     let hasVector = false;
     try {
       await client.query('CREATE EXTENSION IF NOT EXISTS vector');
       hasVector = true;
     } catch {
-      console.warn('⚠️  pgvector not available — RAG features limited');
+      console.warn('pgvector not available — RAG features limited');
     }
 
     await client.query('BEGIN');
 
-    // Core matters table
     await client.query(`
       CREATE TABLE IF NOT EXISTS matters (
         id TEXT PRIMARY KEY,
@@ -93,18 +88,13 @@ async function _doInitialize(): Promise<void> {
       )
     `);
 
-    // Migrate existing tables: TEXT[] -> JSONB for adversarial_critiques
-    // Run outside main transaction to avoid aborting on harmless errors
     await client.query('COMMIT');
     try {
       await client.query(`ALTER TABLE matters ALTER COLUMN adversarial_critiques DROP DEFAULT`);
       await client.query(`ALTER TABLE matters ALTER COLUMN adversarial_critiques TYPE JSONB USING to_jsonb(adversarial_critiques)`);
       await client.query(`ALTER TABLE matters ALTER COLUMN adversarial_critiques SET DEFAULT '[]'::jsonb`);
-    } catch {
-      // Column is already JSONB or table was just created — ignore
-    }
+    } catch {}
 
-    // Add new columns if they don't exist yet (idempotent migrations)
     const migrations = [
       `ALTER TABLE matters ADD COLUMN IF NOT EXISTS adversarial_loop_count INTEGER DEFAULT 0`,
       `ALTER TABLE matters ADD COLUMN IF NOT EXISTS conflict_check JSONB`,
@@ -113,12 +103,11 @@ async function _doInitialize(): Promise<void> {
       `ALTER TABLE matters ADD COLUMN IF NOT EXISTS missing_provisions JSONB DEFAULT '[]'`,
     ];
     for (const sql of migrations) {
-      try { await client.query(sql); } catch { /* column already exists */ }
+      try { await client.query(sql); } catch {}
     }
 
     await client.query('BEGIN');
 
-    // Legal documents table
     await client.query(`
       CREATE TABLE IF NOT EXISTS legal_documents (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -131,7 +120,6 @@ async function _doInitialize(): Promise<void> {
       )
     `);
 
-    // Document chunks — with or without pgvector
     if (hasVector) {
       await client.query(`
         CREATE TABLE IF NOT EXISTS document_chunks (
@@ -150,9 +138,7 @@ async function _doInitialize(): Promise<void> {
           ON document_chunks USING ivfflat (embedding vector_cosine_ops)
           WITH (lists = 100)
         `);
-      } catch {
-        // IVFFlat needs data — will be created on first seed
-      }
+      } catch {}
       await client.query(`
         CREATE INDEX IF NOT EXISTS document_chunks_metadata_idx 
         ON document_chunks USING gin (metadata)
@@ -171,7 +157,6 @@ async function _doInitialize(): Promise<void> {
       `);
     }
 
-    // Issue citations
     await client.query(`
       CREATE TABLE IF NOT EXISTS issue_citations (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -184,7 +169,6 @@ async function _doInitialize(): Promise<void> {
       )
     `);
 
-    // Query cache
     await client.query(`
       CREATE TABLE IF NOT EXISTS query_cache (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -197,7 +181,6 @@ async function _doInitialize(): Promise<void> {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS query_cache_hash_idx ON query_cache(query_hash)`);
 
-    // Analytics
     await client.query(`
       CREATE TABLE IF NOT EXISTS analysis_analytics (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -213,25 +196,24 @@ async function _doInitialize(): Promise<void> {
 
     await client.query('COMMIT');
     _initialized = true;
-    console.log('✅ Database schema initialized');
+    console.log('Database schema initialized');
   } catch (error) {
     await client.query('ROLLBACK');
     if (error instanceof Error) {
       const msg = error.message.toLowerCase();
       if (msg.includes('already exists') || msg.includes('duplicate')) {
         _initialized = true;
-        console.log('ℹ️  Database schema already exists');
+        console.log('Database schema already exists');
         return;
       }
     }
-    console.error('⚠️  Database init error:', error);
+    console.error('Database init error:', error);
     throw error;
   } finally {
     client.release();
   }
 }
 
-// Helper: execute with auto-retry on transient failures
 export async function withRetry<T>(
   fn: (client: PoolClient) => Promise<T>,
   maxRetries = 2

@@ -163,7 +163,7 @@ export default function GuardrailsStage({ matter, stage }: Props) {
                             : 'severity-critical'
                         }`}
                       >
-                        {isPassing ? '✓ Pass' : isWarning ? '⚠ Warning' : '✗ Fail'}
+                        {isPassing ? 'Pass' : isWarning ? 'Warning' : 'Fail'}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">{check.description}</p>

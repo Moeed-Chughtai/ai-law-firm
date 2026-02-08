@@ -135,7 +135,7 @@ export default function DraftingStage({ matter, stage }: Props) {
                         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                         .replace(/~~(.*?)~~/g, '<del>$1</del>')
                         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                        .replace(/✅/g, '<span class="text-success-500">✅</span>')
+                        .replace(/No changes needed/g, '<span class="text-success-500">No changes needed</span>')
                         .replace(/\n/g, '<br/>'),
                     }}
                   />

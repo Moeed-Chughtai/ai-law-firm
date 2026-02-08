@@ -92,7 +92,7 @@ const MARKET_DATA_2024 = `# Startup Financing Market Data 2024
 4. Delaware jurisdiction standard (80%+ of deals)`;
 
 async function main() {
-  console.log('🌱 Seeding legal documents...');
+  console.log('Seeding legal documents...');
 
   try {
     // Seed YC SAFE Template
@@ -107,7 +107,7 @@ async function main() {
       { source: 'Y Combinator', version: '2024' },
       safeChunks
     );
-    console.log('✅ Seeded YC SAFE Template');
+    console.log('Seeded YC SAFE Template');
 
     // Seed Market Data
     const marketChunks = chunkLegalDocument(MARKET_DATA_2024, {
@@ -121,12 +121,12 @@ async function main() {
       { source: 'Market Research', year: 2024, quarter: 'Q3-Q4' },
       marketChunks
     );
-    console.log('✅ Seeded Market Data 2024');
+    console.log('Seeded Market Data 2024');
 
-    console.log('✅ All legal documents seeded successfully');
+    console.log('All legal documents seeded successfully');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    console.error('Seeding failed:', error);
     process.exit(1);
   }
 }

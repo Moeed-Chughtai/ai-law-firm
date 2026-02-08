@@ -84,16 +84,16 @@ Synthesize all research into a single, authoritative recommendation that the cli
 
 **RESEARCH INPUTS:**
 
-📊 **Market Intelligence (Specialist 1):**
+**Market Intelligence (Specialist 1):**
 ${issue.research.marketNorms}
 
-💰 **Financial Impact Analysis (Specialist 2):**
+**Financial Impact Analysis (Specialist 2):**
 ${issue.research.riskImpact}
 
-🤝 **Negotiation Strategy (Specialist 3):**
+**Negotiation Strategy (Specialist 3):**
 ${issue.research.negotiationLeverage}
 
-⚖️ **Legal Authority & Precedent (Specialist 4):**
+**Legal Authority & Precedent (Specialist 4):**
 ${issue.research.precedents || 'No legal precedent research available'}
 
 **DEAL CONTEXT:**
@@ -129,7 +129,6 @@ export async function runSynthesis(matter: Matter): Promise<Partial<Matter>> {
   const issues = [...matter.issues];
   let overallConfidence = 0;
 
-  // Process synthesis in parallel batches of 4
   const BATCH_SIZE = 4;
   const synthesizedIssues: Issue[] = [];
 
@@ -147,7 +146,6 @@ export async function runSynthesis(matter: Matter): Promise<Partial<Matter>> {
 
     synthesizedIssues.push(...batchResults);
 
-    // Update incrementally
     const current = await getMatter(matter.id);
     if (current) {
       const allIssues = [...synthesizedIssues, ...issues.slice(synthesizedIssues.length)];

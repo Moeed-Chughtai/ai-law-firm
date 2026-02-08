@@ -66,21 +66,21 @@ ${matter.documentText}
 
 ${isFounder ? `**OUTPUT FORMAT FOR FOUNDER:**
 
-## 📝 What Needs to Change
+## What Needs to Change
 [1-2 sentence plain-English description of the change. No jargon. Example: "The valuation cap is too low — you should push for a higher number that better reflects your company's value."]
 
-## ✏️ Suggested Language
+## Suggested Language
 > **Current:** "[Quote the exact current text from the document]"
 > 
 > **Proposed:** "[Your exact proposed replacement text — ready to send to the investor]"
 
-## 💡 Why This Matters
+## Why This Matters
 [2-3 sentences on the practical impact. Use dollar amounts, percentages, or concrete scenarios. Example: "At a $30M Series A, this change saves you approximately 3% dilution, worth about $900K in equity."]
 
-## 🗣️ How to Bring This Up
+## How to Bring This Up
 [A suggested script for the conversation, including tone guidance. Example: "You could say: 'We're excited to close this, but our counsel flagged that the valuation cap is below current market for [stage]. We'd like to discuss moving it to $[X]M, which is more in line with recent comparable deals.'"]
 
-## ↩️ Fallback Position
+## Fallback Position
 [What to accept if the investor pushes back. Example: "If they won't move on the cap, ask for a 25% discount rate as compensation."]` : `**OUTPUT FORMAT FOR LEGAL COUNSEL:**
 
 ## Redline — §${issue.clauseRef}
@@ -107,7 +107,7 @@ ${isSafe ? '- YC Post-Money SAFE standard form, Section [X]' : '- NVCA Model Ter
 - Strategic timing: [early negotiation / package with other terms / final round concession]`}
 
 **IMPORTANT:** If the current term is actually at or better than market standard and genuinely needs no changes, respond with:
-✅ **No changes needed — §${issue.clauseRef}**
+**No changes needed — §${issue.clauseRef}**
 This clause ${isFounder ? 'is already written in your favor' : 'meets or exceeds market standard'}. [2-3 sentences explaining why the current language is acceptable and what protection it provides.]`;
 
   return await callLLM(systemPrompt, userPrompt, {
@@ -120,7 +120,6 @@ export async function runDrafting(matter: Matter): Promise<Partial<Matter>> {
   const issues = [...matter.issues];
   const issuesWithSynthesis = issues.filter((i) => i.synthesis);
 
-  // Draft redlines in parallel batches of 4
   const BATCH_SIZE = 4;
   for (let batchStart = 0; batchStart < issuesWithSynthesis.length; batchStart += BATCH_SIZE) {
     const batch = issuesWithSynthesis.slice(batchStart, batchStart + BATCH_SIZE);
@@ -129,12 +128,11 @@ export async function runDrafting(matter: Matter): Promise<Partial<Matter>> {
       batch.map((issue) =>
         draftRedlineForIssue(issue, matter).catch((error) => {
           console.error(`Drafting failed for issue ${issue.id}:`, error);
-          return `⚠️ Redline generation failed — please review this issue manually.`;
+          return `Redline generation failed — please review this issue manually.`;
         })
       )
     );
 
-    // Apply redlines to issues
     for (let i = 0; i < batch.length; i++) {
       const issueIndex = issues.findIndex((iss) => iss.id === batch[i].id);
       if (issueIndex >= 0) {

@@ -4,27 +4,9 @@ A production-ready legal analysis system that mirrors Big Law workflows using a 
 
 ---
 
-## 🏗️ System Architecture
-
-### Tech Stack
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
-- **Backend**: PostgreSQL 15+ with pgvector extension
-- **AI**: OpenAI GPT-4o with RAG (Retrieval-Augmented Generation)
-- **Vector Search**: 1536-dimensional embeddings via `text-embedding-3-small`
-
-### Core Components
-- **Pipeline Engine** (`lib/pipeline/engine.ts`) — Orchestrates all stages, manages state transitions, enforces adversarial review loops (max 2 iterations)
-- **RAG System** (`lib/rag/`) — Chunking, embeddings, vector retrieval, context compression
-- **Database Layer** (`lib/db/`) — Connection pooling, schema migrations, CRUD operations
-- **Stage Processors** (`lib/pipeline/stages/`) — 9 specialized processors for each pipeline stage
-
----
-
-## 📊 The 9-Stage Agentic Pipeline
+## The 9-Stage Agentic Pipeline
 
 Each stage uses **agentic reasoning** where GPT-4o acts as a specialized legal expert with specific tools, context, and validation criteria. Stages are **sequential** and **stateful** — each builds on prior outputs.
-
----
 
 ### **Stage 1: Intake & Scoping**
 **Purpose**: Initial document validation and engagement scoping  
@@ -226,7 +208,7 @@ Each stage uses **agentic reasoning** where GPT-4o acts as a specialized legal e
 
 ---
 
-## 🔄 Pipeline Orchestration
+## Pipeline Orchestration
 
 The **Pipeline Engine** (`lib/pipeline/engine.ts`) manages state transitions:
 
@@ -258,62 +240,7 @@ The **Pipeline Engine** (`lib/pipeline/engine.ts`) manages state transitions:
 
 ---
 
-## 🧠 RAG System Architecture
-
-### Why RAG Is Critical
-Legal analysis requires **grounding in precedent**. Pure LLM responses lack citations and can hallucinate. RAG solves this by retrieving actual legal documents and citing them.
-
-### RAG Pipeline
-
-**1. Chunking** (`lib/rag/chunking.ts`)  
-- Hierarchical chunking: Split documents into sections (500 tokens) and clauses (200 tokens)
-- Preserves context by overlapping chunks (50 token overlap)
-- Maintains metadata (document type, section title, page number)
-
-**2. Embedding** (`lib/rag/embeddings.ts`)  
-- OpenAI `text-embedding-3-small` model (1536 dimensions)
-- Batch processing (100 chunks per API call)
-- Cached embeddings stored in `document_chunks` table
-
-**3. Retrieval** (`lib/rag/retrieval.ts`)  
-- **Multi-query retrieval**: Generate 3 query variations per issue for better recall
-  - Original query: "What is standard anti-dilution protection?"
-  - Variation 1: "Typical anti-dilution clauses in Series A financings"
-  - Variation 2: "Weighted average vs full ratchet anti-dilution"
-- **Vector similarity search**: pgvector cosine similarity (`<=>` operator)
-- **Metadata filtering**: Filter by document type, date range, jurisdiction
-- **Top-K retrieval**: Return top 10 chunks per query
-
-**4. Context Compression** (`lib/rag/retrieval.ts`)  
-- LLM-based re-ranking: GPT-4o scores each chunk for relevance (0-100)
-- Filters out noise (chunks scoring <50)
-- Reduces token usage by 40-60% while preserving quality
-
-**5. Citation Tracking** (`lib/db/schema.sql`)  
-- `issue_citations` table links each issue to source documents
-- Every recommendation includes citation IDs
-- Audit trail: Which documents informed which recommendations
-
----
-
-## 🗄️ Database Schema
-
-**`matters`** — Central table storing all pipeline state  
-Columns: `id`, `title`, `document_text`, `document_type`, `status`, `intake_result`, `parsing_result`, `issue_analysis_result`, `research_result`, `synthesis_result`, `drafting_result`, `adversarial_review_result`, `guardrail_result`, `finalization_result`, `adversarial_loop_count`, `conflict_check`, `engagement_scope`, `defined_terms`, `missing_provisions`, `created_at`, `updated_at`
-
-**`legal_documents`** — Legal precedent library  
-Columns: `id`, `title`, `content`, `doc_type`, `metadata`, `created_at`
-
-**`document_chunks`** — Chunked documents with embeddings  
-Columns: `id`, `document_id`, `chunk_text`, `embedding` (vector 1536), `metadata`, `created_at`  
-Index: `CREATE INDEX ON document_chunks USING ivfflat (embedding vector_cosine_ops);`
-
-**`issue_citations`** — Links issues to source documents  
-Columns: `id`, `matter_id`, `issue_id`, `document_id`, `relevance_score`, `created_at`
-
----
-
-## 🚀 Setup & Installation
+## Setup & Installation
 
 ### Prerequisites
 - PostgreSQL 15+ with pgvector extension
@@ -352,131 +279,9 @@ npm run dev
 
 ---
 
-## 🎯 Usage Flow
+## Usage Flow
 
 1. **Upload Document**: Upload SAFE, term sheet, or other legal doc (supports PDF via server-side extraction)
 2. **Pipeline Runs**: 9 stages execute sequentially (takes 30-90 seconds depending on document complexity)
 3. **View Results**: Navigate through stages in the UI to see parsing, issues, research, recommendations
 4. **Download Deliverables**: Issue memo, annotated doc, risk summary, audit log
-
----
-
-## 🔒 Production Considerations
-
-- **Rate Limiting**: OpenAI API calls are sequential to avoid rate limits (can be parallelized with proper throttling)
-- **Caching**: Query cache table reduces redundant RAG retrievals
-- **Error Handling**: Each stage has try-catch with fallback to prior state
-- **Audit Logging**: Full pipeline trace stored in `finalization_result.metadata.pipelineMetadata`
-- **Security**: API keys in environment variables, no client-side exposure
-
----
-
-## 📁 Project Structure
-
-```
-lib/
-  ai/openai.ts              # OpenAI client wrapper
-  db/
-    client.ts               # PostgreSQL connection pool + migrations
-    schema.sql              # Database schema
-  pipeline/
-    engine.ts               # Pipeline orchestrator with adversarial loops
-    stages/
-      intake.ts             # Stage 1: Intake & conflict check
-      parsing.ts            # Stage 2: Document structure extraction
-      issueAnalysis.ts      # Stage 3: Issue detection
-      research.ts           # Stage 4: RAG-powered research
-      synthesis.ts          # Stage 5: Recommendation generation
-      drafting.ts           # Stage 6: Redline generation
-      adversarialReview.ts  # Stage 7: Internal quality challenge
-      guardrails.ts         # Stage 8: Safety checks
-      finalize.ts           # Stage 9: Deliverables packaging
-  rag/
-    chunking.ts             # Hierarchical document chunking
-    embeddings.ts           # OpenAI embeddings generation
-    retrieval.ts            # Multi-query retrieval + compression
-    vectorStore.ts          # pgvector CRUD operations
-  store.ts                  # In-memory state management
-  types.ts                  # TypeScript interfaces for all stages
-  utils.ts                  # Utility functions
-
-app/
-  api/
-    init/route.ts           # Database initialization endpoint
-    matters/route.ts        # Matter CRUD
-    parse-pdf/route.ts      # Server-side PDF text extraction
-  matter/[id]/page.tsx      # Matter detail view with stage timeline
-  page.tsx                  # Document upload page
-
-components/
-  matter/
-    stages/                 # UI components for each pipeline stage
-```
-
----
-
-## 🧪 Testing
-
-```bash
-# Upload sample document
-curl -X POST http://localhost:3000/api/matters \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Test SAFE",
-    "documentText": "...",
-    "documentType": "SAFE"
-  }'
-
-# Check pipeline progress
-curl http://localhost:3000/api/matters/{matter-id}
-```
-
----
-
-## 🛠️ Extending the System
-
-### Adding a New Pipeline Stage
-1. Create stage file in `lib/pipeline/stages/`
-2. Define stage interface in `lib/types.ts`
-3. Add stage to engine execution order in `lib/pipeline/engine.ts`
-4. Update database schema to store stage result
-5. Create UI component in `components/matter/stages/`
-
-### Adding Legal Documents to RAG
-```typescript
-import { storeLegalDocument, chunkLegalDocument } from './lib/rag';
-
-const chunks = chunkLegalDocument(content, { docType: 'precedent' });
-await storeLegalDocument(
-  'Series A Term Sheet Template',
-  content,
-  'term_sheet',
-  { source: 'NVCA', year: 2024 },
-  chunks
-);
-```
-
----
-
-## 📊 Performance Metrics
-
-- **Pipeline Duration**: 30-90 seconds for typical documents
-- **RAG Retrieval**: <100ms per query (with pgvector index)
-- **Adversarial Loops**: Average 1.2 loops per matter
-- **Token Usage**: ~50K-100K tokens per matter (varies by complexity)
-
----
-
-## 🤝 Contributing
-
-This is a demonstration project. For production use, consider:
-- Fine-tuning embeddings on legal corpus
-- Adding graph-based retrieval (document relationships)
-- Multi-jurisdiction support
-- Real-time collaboration features
-
----
-
-## 📄 License
-
-MIT

@@ -81,7 +81,7 @@ Minor calibration disagreements (e.g., "I'd rate this medium, not low") do NOT w
 
 Conduct a rigorous three-level adversarial review of this complete ${docName} analysis before client delivery.
 ${isReviewLoop ? `
-**⚠️ THIS IS A REVISION REVIEW (Round ${matter.adversarialLoopCount})**
+**THIS IS A REVISION REVIEW (Round ${matter.adversarialLoopCount})**
 The drafting team has revised their work based on your prior critique. Your prior findings were:
 ${priorCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 

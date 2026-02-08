@@ -174,10 +174,10 @@ ${matter.documentText}
 
 **STRUCTURAL ANALYSIS FROM PARSING STAGE (use this to ensure complete coverage):**
 Sections identified: ${matter.parsedSections?.length || 0}
-${matter.parsedSections?.map(s => `• ${s.heading} (${s.clauseCount} clauses)${s.deviationFromStandard && s.deviationFromStandard !== 'Consistent with standard form' ? ` ⚠️ ${s.deviationFromStandard}` : ''}`).join('\n') || 'No parsing data available'}
+${matter.parsedSections?.map(s => `• ${s.heading} (${s.clauseCount} clauses)${s.deviationFromStandard && s.deviationFromStandard !== 'Consistent with standard form' ? ` — ${s.deviationFromStandard}` : ''}`).join('\n') || 'No parsing data available'}
 
 **DEFINED TERMS EXTRACTED (check each for deviation from standard):**
-${matter.definedTerms?.map(dt => `• "${dt.term}" — ${dt.isStandard ? '✅ Standard' : '⚠️ Non-standard'}${dt.concerns ? ` — ${dt.concerns}` : ''}`).join('\n') || 'No defined terms extracted'}
+${matter.definedTerms?.map(dt => `• "${dt.term}" — ${dt.isStandard ? 'Standard' : 'Non-standard'}${dt.concerns ? ` — ${dt.concerns}` : ''}`).join('\n') || 'No defined terms extracted'}
 
 **MISSING PROVISIONS IDENTIFIED (each should generate an issue):**
 ${matter.missingProvisions?.map(mp => `• ${mp.provision} [${mp.importance}] — ${mp.explanation}`).join('\n') || 'No missing provisions identified'}

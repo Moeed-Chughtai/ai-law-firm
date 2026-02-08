@@ -1,19 +1,14 @@
-/**
- * Legal document ingestion system
- * Handles uploading, chunking, embedding, and storing legal documents in the RAG system
- */
-
 import { pool } from '@/lib/db/client';
 import { chunkLegalDocument } from './chunking';
 import { generateEmbeddingsBatch } from './embeddings';
 
-export type DocumentSource = 
-  | 'statute'           // Statutory law (DGCL, UCC, Securities Act, etc.)
-  | 'case_law'          // Court decisions and precedents
-  | 'standard_form'     // Model agreements (NVCA, ABA templates)
-  | 'practice_guide'    // Legal treatises and practice guides
-  | 'firm_knowledge'    // Internal firm memos and playbooks
-  | 'regulation'        // SEC rules, state regulations
+export type DocumentSource =
+  | 'statute'
+  | 'case_law'
+  | 'standard_form'
+  | 'practice_guide'
+  | 'firm_knowledge'
+  | 'regulation'
   | 'other';
 
 export interface LegalDocumentInput {
@@ -32,18 +27,10 @@ export interface IngestionResult {
   title: string;
 }
 
-/**
- * Ingest a single legal document into the RAG system
- * 1. Store document metadata
- * 2. Chunk the content
- * 3. Generate embeddings
- * 4. Store chunks with embeddings
- */
 export async function ingestLegalDocument(
   doc: LegalDocumentInput
 ): Promise<IngestionResult> {
   try {
-    // 1. Insert document metadata
     const docResult = await pool.query(
       `INSERT INTO legal_documents 
        (title, doc_type, content, metadata, created_at, updated_at)
@@ -64,7 +51,6 @@ export async function ingestLegalDocument(
 
     const documentId = docResult.rows[0].id;
 
-    // 2. Chunk the document
     const chunks = chunkLegalDocument(doc.content, {
       docType: doc.docType,
       jurisdiction: doc.jurisdiction,
@@ -75,18 +61,14 @@ export async function ingestLegalDocument(
       throw new Error('No chunks generated from document');
     }
 
-    // 3. Generate embeddings in batches (max 100 per batch to avoid rate limits)
     const BATCH_SIZE = 50;
     let totalChunksStored = 0;
 
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE);
       const texts = batch.map(chunk => chunk.content);
-      
-      // Generate embeddings for this batch
       const embeddings = await generateEmbeddingsBatch(texts);
 
-      // 4. Store chunks with embeddings
       for (let j = 0; j < batch.length; j++) {
         const chunk = batch[j];
         const embedding = embeddings[j];
@@ -113,7 +95,7 @@ export async function ingestLegalDocument(
       }
     }
 
-    console.log(`✅ Ingested: ${doc.title} (${totalChunksStored} chunks)`);
+    console.log(`Ingested: ${doc.title} (${totalChunksStored} chunks)`);
 
     return {
       documentId,

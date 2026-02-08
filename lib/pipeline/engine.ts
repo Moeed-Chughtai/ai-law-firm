@@ -34,8 +34,6 @@ const STAGE_RUNNERS: Record<StageId, (matter: Matter) => Promise<Partial<Matter>
   deliverables: runFinalize,
 };
 
-// Maximum number of adversarial review → drafting loopbacks
-// Real firms typically do 1-2 rounds of revision before partner sign-off
 const MAX_ADVERSARIAL_LOOPS = 2;
 
 function updateStage(matter: Matter, stageId: StageId, updates: Partial<StageInfo>): Matter {
@@ -148,11 +146,11 @@ async function runStage(matterId: string, stageId: StageId): Promise<boolean> {
       `Stage ${stageId} completed in ${(stageDuration / 1000).toFixed(1)}s`
     );
     await setMatter(matter);
-    console.log(`✅ Stage ${stageId} completed in ${(stageDuration / 1000).toFixed(1)}s`);
+    console.log(`Stage ${stageId} completed in ${(stageDuration / 1000).toFixed(1)}s`);
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`❌ Stage ${stageId} failed:`, errorMsg);
+    console.error(`Stage ${stageId} failed:`, errorMsg);
 
     matter = await getMatter(matterId);
     if (!matter) return false;
@@ -169,16 +167,13 @@ async function runStage(matterId: string, stageId: StageId): Promise<boolean> {
 }
 
 export async function runPipeline(matterId: string): Promise<void> {
-  console.log(`🚀 Pipeline started for matter ${matterId}`);
+  console.log(`Pipeline started for matter ${matterId}`);
   const pipelineStart = Date.now();
 
   for (const stageId of STAGE_ORDER) {
     const success = await runStage(matterId, stageId);
     if (!success) return;
 
-    // ADVERSARIAL LOOPBACK — mirrors real law firm QC revision process
-    // When adversarial review finds material errors, loop back to drafting
-    // This is how real firms work: QC partner sends work back to the drafting team
     if (stageId === 'adversarial_review') {
       let matter = await getMatter(matterId);
       if (!matter) return;
@@ -188,7 +183,7 @@ export async function runPipeline(matterId: string): Promise<void> {
         (matter.adversarialLoopCount || 0) < MAX_ADVERSARIAL_LOOPS
       ) {
         const loopNum = (matter.adversarialLoopCount || 0) + 1;
-        console.log(`🔄 Adversarial loopback #${loopNum} — re-running drafting and review`);
+        console.log(`Adversarial loopback #${loopNum} — re-running drafting and review`);
 
         matter.adversarialLoopCount = loopNum;
         matter = addAuditEntry(
@@ -199,11 +194,9 @@ export async function runPipeline(matterId: string): Promise<void> {
         );
         await setMatter(matter);
 
-        // Re-run drafting with adversarial feedback incorporated
         const draftSuccess = await runStage(matterId, 'drafting');
         if (!draftSuccess) return;
 
-        // Re-run adversarial review on revised drafts
         const reviewSuccess = await runStage(matterId, 'adversarial_review');
         if (!reviewSuccess) return;
 
@@ -212,7 +205,7 @@ export async function runPipeline(matterId: string): Promise<void> {
       }
 
       if (matter.draftRevised && (matter.adversarialLoopCount || 0) >= MAX_ADVERSARIAL_LOOPS) {
-        console.log(`⚠️ Maximum adversarial loops (${MAX_ADVERSARIAL_LOOPS}) reached — proceeding with escalation flag`);
+        console.log(`Maximum adversarial loops (${MAX_ADVERSARIAL_LOOPS}) reached — proceeding with escalation flag`);
         matter = addAuditEntry(
           matter,
           'adversarial_review',
@@ -224,7 +217,6 @@ export async function runPipeline(matterId: string): Promise<void> {
     }
   }
 
-  // Mark pipeline complete
   const matter = await getMatter(matterId);
   if (matter) {
     matter.currentStage = null;
@@ -237,6 +229,6 @@ export async function runPipeline(matterId: string): Promise<void> {
       detail: `Full pipeline completed in ${totalTime}s${matter.adversarialLoopCount ? ` (${matter.adversarialLoopCount} revision loop(s) performed)` : ''}`,
     });
     await setMatter(matter);
-    console.log(`🏁 Pipeline complete for matter ${matterId} in ${totalTime}s`);
+    console.log(`Pipeline complete for matter ${matterId} in ${totalTime}s`);
   }
 }
